@@ -48,3 +48,19 @@ def health():
 def metrics():
     data = generate_latest()
     return Response(content=data, media_type=CONTENT_TYPE_LATEST)
+
+import asyncio
+from fastapi import HTTPException
+
+@app.get("/slow")
+async def slow(ms: int = 300):
+    # 의도적 지연(ms)
+    await asyncio.sleep(ms / 1000.0)
+    return {"status": "ok", "delay_ms": ms}
+
+@app.get("/error")
+def error(code: int = 500):
+    # 의도적 5xx 오류 (기본 500)
+    if code < 500 or code > 599:
+        code = 500
+    raise HTTPException(status_code=code, detail=f"intentional {code} error")
