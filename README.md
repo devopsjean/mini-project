@@ -28,7 +28,7 @@
 curl -i http://localhost:8080/health
 ```
 
-![healthcheck](images/2_1_healthcheck.png)
+![health](images/rep1-health.png)
 
 #### (2) 의도적인 응답 지연
 
@@ -39,7 +39,7 @@ curl -i http://localhost:8080/health
 curl -s -w '\nstatus=%{http_code} total=%{time_total}s\n' 'http://localhost:8080/slow?ms=1000' -o /dev/null
 ```
 
-![slowcheck](images/2_1_slowcheck.png)
+![slowc](images/rep1-slow.png)
 
 #### (3) 의도적인 오류
 
@@ -50,7 +50,7 @@ curl -s -w '\nstatus=%{http_code} total=%{time_total}s\n' 'http://localhost:8080
 curl -i http://localhost:8080/error
 ```
 
-![errorcheck](images/2_1_errorcheck.png)
+![errorcheck](images/rep1-error.png)
 
 ### 2.2. Obervability 스택
 
