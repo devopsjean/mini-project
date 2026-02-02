@@ -151,6 +151,30 @@ Docker Compose 환경에서 서비스 간 통신을 위해 Prometheus의 내부 
 
 #### 2.2.3 Alerting: Prometheus Alert Rule 또는 Grafana Alert
 
+본 프로젝트에서는 서비스 신뢰성 위반을 감지하기 위해 Prometheus Alert Rule을 사용한다. Alert는 SLI 후보지표(Availabitity, Error Rate, Latency)를 기반으로 정의되며, Grafana는 Alert 분석을 위한 시각화 도구로 활용된다.
+
+주요 ALert는 다음과 같다:
+    - API Down (Availability)
+    - High Error Rate (5xx)
+    - High Latency (p95)
+
+Prometheus는 Alert Rule을 평가하여 Alert 이벤트를 생성하지만, 실제 알림 전송(Mail, Slack 등), 그룹핑, 중복제거는 ALertmanager가 담당한다.
+
+##### 2.2.3.1 Alerting Architecture
+
+![alteringarchitecture](/images/rep2-alertingarchitecture.png)
+
+본 프로젝트에서는 서비스 신뢰서 위반을 감지하기 우해 Prometheus Alert Rule을 사용한다.
+Alert는 SLI후보 지표인 Availavbility, Error Rate, Latency를 기반으로 정의된다.
+
+##### 2.2.3.2 Alert Validation Summary
+
+- Prometheus가 alert-rules.yml에 정의된 규칙을 정상적으로 평가함을 확인하였다.
+- Alert는 Inactive -> Firing -> Resolved 상태 전이를 의도한 대로 수행하였다.
+- Alertmanager는 수신된 Alert를 설정된 기준에 따라 정상적으로 라우팅 및 그룹핑하였다.
+- Alert 전달은 로컬 webhook receiver를 통해 검증되었으며, HTTP 200을 통해 실제 전송이 이루어졌음을 확인하였다.
+- 외부 서비스 (Slack,Email 등)에 의존하지 않고도 Alert 평가 및 전달 과정을 완전 재현 가능하게 구성하였다.
+
 ### 2.3. SLI/SLO 설계
 
 #### 2.3.1. SLI 정의( 최소 3개 이상)

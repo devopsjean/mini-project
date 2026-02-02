@@ -1,11 +1,48 @@
 groups:
-  - name: basic
+  - name: sre-mini-project-alerts
     rules:
-      - alert: PrometheusTargetDown
-        expr: up == 0
+      - alert: APIDown
+        expr: up{job="api"} == 0
         for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "API service is down"
+          description: "API has not been reachable for more than 1 minute."
+
+      - alert: HighErrorRate
+        expr: |
+          (
+            sum(rate(http_requests_total{status=~"5.."}[5m]))
+            /
+            sum(rate(http_requests_total[5m]))
+          ) > 0.05
+        for: 2m
         labels:
           severity: warning
         annotations:
-          summary: "A target is down"
-          description: "Target {{ $labels.instance }} of job {{ $labels.job }} has been down for more than 1 minute."
+          summary: "High 5xx error rate detected"
+          description: "More than 5% of requests are failing with 5xx errors."
+
+      - alert: HighLatencyP95
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum(rate(http_request_duration_seconds_bucket[5m])) by (le)
+          ) > 0.3
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High API latency (p95)"
+          description: "p95 latency has exceeded 300ms for more than 3 minutes."
+      
+      - alert: TestAlwaysFiring
+        expr: vector(1)
+        for: 0s
+        labels:
+          severity: info
+        annotations:
+          summary: "Test alert"
+          description: "Test alert to verify alert delivery pipeline"
+

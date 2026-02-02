@@ -1,4 +1,13 @@
 services:
+  api:
+    build:
+      context: ./api
+    container_name: api
+    ports:
+      - "8080:8080"
+    networks:
+      - monitoring
+
   prometheus:
     image: prom/prometheus:v2.49.1
     container_name: prometheus
@@ -14,6 +23,9 @@ services:
       - prometheus_data:/prometheus
     networks:
       - monitoring
+    depends_on:
+      - api
+      - alertmanager
 
   grafana:
     image: grafana/grafana:10.2.3
@@ -32,12 +44,26 @@ services:
     networks:
       - monitoring
 
-  api:
-    build:
-      context: ./api
-    container_name: api
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    container_name: alertmanager
+    volumes:
+      - ./alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+    command:
+      - "--config.file=/etc/alertmanager/alertmanager.yml"
     ports:
-      - "8080:8080"
+      - "9093:9093"
+    networks:
+      - monitoring
+    depends_on:
+      - webhook
+
+  webhook:
+    build: ./webhook
+    container_name: webhook
+    # 포트는 필수가 아님. 충돌 피하려면 아래 ports는 주석 처리해도 됨.
+    ports:
+      - "9001:9001"
     networks:
       - monitoring
 
