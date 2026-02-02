@@ -68,7 +68,6 @@ API는 /metrics에서 Prometheus 형식의 메트릭을 노출하며, Prometheus
 Prometheus는 기본 scrape_interval(15s)에 따라 API의 /metrics 엔드포인트를 주기적으로 수집한다.
 scrape_interval=15s는 데모 환경에서 메트릭 반응성을 확보하면서 과도한 scrape 부하를 피하기 위한 기본값으로 설정하였다.
 
-
 ##### 2.2.1.2 API 노출(expose)
 
 ![api-metrics](images/rep2-api-metrics.png)
@@ -92,6 +91,62 @@ Counter는 누적 값으로 트래픽 추이를 확인하는 데 사용되며,Hi
 해당 메트릭들은 이후 SLI/SLO 정의(가용성, 지연시간) 및 Alert Rule의 기반으로 사용된다.
 
 #### 2.2.2 Visualization: Grafana
+
+![visualization](images/rep2-visualizationgranafa.png)
+
+본 구조에서는 API가 /metrics 엔드포인트를 통해 메트릭을 노출하고, Prometheus가 이를 주기적으로 수집하여 TSDB에 저장한다. Grafana는 Prometheus의 Query API에 PromQL 요청을 전달하며, Prometheus는 내부 TSDB에서 시계열 데이터를 조회한 뒤 PromQL 연산을 수행하고, 계산된 결과를 Grafan에 반환한다.
+
+##### 2.2.2.1 Data Source
+
+![datasources](images/rep2-datasources.png)
+
+Granafa에서 Prometheus를 Data Source로 등록하였다.
+Docker Compose 환경에서 서비스 간 통신을 위해 Prometheus의 내부 주소(http://prometheus:9090)을 사용하였으며, Data Source 연결 테스트를 통해 정상적으로 메트릭을 조회할 수 있음을 확인하였다.
+
+##### 2.2.2.2 Dashboard and Panel 구성
+
+1. **Traffic (RPS)**
+
+    ![trafficrps](images/rep2-trafficrps.png)
+
+    Traffic 패널은 API에 유입되는 요청량을 초당 요청수(RPS)기준으로 시각화 한다.
+    요청량의 변화는 서비스 부하 상태를 판단하는 기본 관측 지표로 활용한다.
+
+1. **Error Rate (5xx)**
+
+    Error Rate 패널은 전체 요청 대비 HTTP 5xx 응답 비율을 나타낸다.
+    서버 오류는 사용자 경험에 직접적인 영향을 미치므로 핵심 관측 지표로 설정하였다.
+
+    ```query
+    sum(rate(http_requests_total{status=~"5.."}[5m]))
+    /
+    sum(rate(http_requests_total[5m]))
+    ```
+
+    현재 환경에서는 HTTP 5xx응답이 발생하지 않아 에러율은 0에 수렴하는 값을 보인다. 이는 서비스가 정상 상태임을 의미하며, 장애 발생시 해당 패널을 통해 즉각적인 이상탐지가 가능하다.
+
+    ![errorrate](images/rep2-errorrate.png)
+
+1. **Latency (p95)**
+
+    평균 지연시간은 일부 느린 요청을 가릴 수 있으므로, 히스토그램 기반 p95 지연시간을 사용하여 상위 지연 요청을 기준으로 서비스 응답성을 관측하였다.
+
+    ```query
+    histogram_quantile(
+    0.95,
+    sum(rate(http_request_duration_seconds_bucket[5m])) by (le)
+    ```
+
+    - API 요청 시 p95 지연시간이 시간 흐름에 따라 변화
+    - Histogram 기반 metric이 정상적으로 집게됨을 확인
+
+    ![latencyp95](images/rep2-latencyp95.png)
+
+1. **결과 요약**
+
+    ![granafadashboard](/images/rep2-granafadashboard.png)
+
+    위 구성을 통해 API서비스에 대한 트래픽, 오류, 지연시간을 Grafana 대시보드에서 통합적으로 관측할 수 있음을 확인하였다. 이는 Prometheus 기반 메트릭 수집과 Grafana 시각화가 정상적으로 연동되었음을 의미하며, 서비스 상태를 실시가으로 파악할 수 있는 기본적인 Observavility 환경을 구축하였다.
 
 #### 2.2.3 Alerting: Prometheus Alert Rule 또는 Grafana Alert
 
