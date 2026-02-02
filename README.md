@@ -135,6 +135,7 @@ Docker Compose 환경에서 서비스 간 통신을 위해 Prometheus의 내부 
     histogram_quantile(
     0.95,
     sum(rate(http_request_duration_seconds_bucket[5m])) by (le)
+    )
     ```
 
     - API 요청 시 p95 지연시간이 시간 흐름에 따라 변화
