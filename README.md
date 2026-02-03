@@ -243,12 +243,154 @@ Alert validation 과정에서 다음과 같은 증적을 확보하였다.
 
 ### 2.3. SLI/SLO 설계
 
-#### 2.3.1. SLI 정의( 최소 3개 이상)
+> 이 섹션에서는 서비스의 신뢰성을 측정하기 위한 SLI와 정량적 목표인 SLO를 정의한다.
 
-#### 2.3.2. SLO 정의( 정량적인 목표)
+### 2.3.1 Service Scope & Definition
 
-- 30일 기준 Availability
-- p95 Latencty 300ms 이하
+- **Service name**: 'fastapi-app'
+- **Service type**: HTTP API service
+- **Users**: internal consumers / demo users
+- **Critical User Journeys**
+  - (UJ-1) 'GET /health'returns '200 OK'
+  - (UJ-2) Core API endpoints return successful responses within acceptable latency
+
+Out of scope:
+
+- Client-side network failures
+- DNS resolution issues
+- Non-production environments
+
+---
+
+### 2.3.2 SLI Selection Rationale
+
+Service reliability is evaluated using indicators that are:
+
+- **User-centric** (reflecting real user experience)
+- **Measurable** (queryable via Prometheus)
+- **Actionable** (can drive operation decisions)
+
+Based on these criteria, the following SLI are selected:
+
+- Availability (Success Rate)
+- Latency (p95)
+- Error Rate (5xx)
+
+---
+
+### 2.3.3 SLI Definitions
+
+> 아래는 서비스 신뢰성을 측정하기 위해 선택한 세가지 SLI와 그 정의를 설명한다.
+
+#### SLI-A: Success Rate (Availability)
+
+**Definition**
+Ratio of successful HTTP requests to total evaluated requests.
+
+- **Good events**: HTTP status codes '2xx', '3xx'
+- **Bad events**: HTTP status codes '5xx'
+- **Excluded** '4xx' responses (treated as client-side errors by policy)
+
+**Formula**
+    ```java
+    Success Rate = Good Requests/ (Good Requests + Bad Requets)
+    ```
+
+**PromQL**
+    ```promql
+    (
+      sum(rate(http_requests_total{Pjob"fastapi", status=~"2..|3.."}[5m]]))
+    )
+    /
+    (
+      sum(rate(http_requests_total{job="fastapi", status=~"2..|3..|5.."}[5m]))
+    )
+    ```
+
+#### SLI-2: Request Latency(p95)
+
+**Definition**
+95th percentile of HTTP request latency measured using histogram metrics.
+    - Captures tail latency experienced by users
+    - Calculated across all relevant requests
+
+**PromQL**
+    ```promql
+      histogram_quantile(
+        0.95,
+        sum by (le) (
+          rate(http_request_duration_seconds_bucket(job="fastapi"}[5m]))
+        )
+    )
+
+#### SLI-3: Error Rate (5xx)
+
+**Definition**
+Ratio of server-side error responses (HTTP 5xx) over total incoming requests.
+    - provides direct visibility into service failures
+    - Complements availability SLI with explicit falilure tracking
+
+**Formula**
+    ```java
+    Error Rate = 5xx Requests / Total Requests
+    ```
+
+---
+
+### 2.3.4 SLO definitions
+
+#### SLO-1: Availability
+
+- **SLI**: Success Rate
+- **Objective** : ≥ 99.9%
+- **Time window**: Rolling 30days
+- **Scope**: All service endpoints
+
+#### SLO-2: Latency
+
+- **SLI**: Request Latency (p95)
+- **Objective**: ≤ 300ms
+- **Time window**: Rolling 30days
+- **Scope**: Critical user-facing endpoints
+
+#### SLO-3: Error Rate
+
+- **SLI**: Error Rate (5xx)
+- **Objective**: ≤ 0.1%
+- **Time windows**: Rolling 30 days
+- **Scope**: All service endpoints
+
+### 2.3.5 SLO Summary Table (Revised)
+
+| SLO ID | SLI           | Good Event           | Bad Event   | Target  | Window |
+|--------|---------------|----------------------|-------------|---------|--------|
+| SLO-1  | Success Rate  | HTTP 2xx, 3xx        | HTTP 5xx    | ≥ 99.9% | 30d    |
+| SLO-2  | Latency (p95) | Request ≤ 300ms      | N/A         | ≤ 300ms | 30d    |
+| SLO-3  | Error Rate    | HTTP non-5xx         | HTTP 5xx    | ≤ 0.1%  | 30d    |
+
+### 2.3.6 Error Budget
+
+Error Budget은 정의된 **SLO를 기준으로 허용 가능한 실패 범위**를 의미하며, 서비스 신뢰성을 운영 관점에서 판단하기 위한 기준선 역할을 한다. 이는 시스템에 강제로 적용되는 규칙이 아니라, 운영 의사결정을 돕기 위한 설계 개념이다.
+
+본 프로젝트에서 정의한 SLO의 시간범위(rolling 30 days)를 기준으로, Error Budget은 다음과 같이 계산된다.
+
+- **Error Budget = 1 - SLO Target**
+
+앞서 정의한 Availability SLO (SLo-1)를 기준으로 하면:
+
+- **Availability SLO (SOL-1)**: ≥ 99.9%
+- **허용 가능한 Error Budget**: 30일 기분 전체 요청 중 최대 0.1%
+
+즉, SLO 평가 기간 동안 전체 요청 중 최대 0.1%ㄲ지의 HTTP 5xx 오류는 Availability SLO 위반으로 간주되지 않는다.
+
+#### 운영 관점에서의 해석
+
+Error Budget은 서비스 운영 시 우선 순위를 결정하기 위한 기준으로 활용된다.
+
+- Error Budget은 소모 속도가 빠를 경우, 신규 기능 개발보다는 안정성 개선과 장애 원인 분석을 우선한다.
+- Error Budget이 안정적으로 유지되는 경우, 기능 개발 및 배포를 정산적으로 진행할 수 있다.
+
+본 문서에서는 Error Budget을 설계 수준에서 정의하여, SLO 기반 Alerting 및 향후 운영 정책으로 확장할 수 있는 기초 기준을 마련하는 데 목적이 있다.
 
 ### 2.4. 장애 시나리오 및 Incident Response
 

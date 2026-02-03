@@ -37,13 +37,13 @@ groups:
           summary: "High API latency (p95)"
           description: "p95 latency has exceeded 300ms for more than 3 minutes."
       
-      - alert: TestAlwaysFiring
-        expr: vector(1)
-        for: 0s
-        labels:
-          severity: info
-          job: test
-        annotations:
-          summary: "Test alert"
-          description: "Test alert to verify alert delivery pipeline"
+      # - alert: TestAlwaysFiring
+      #   expr: vector(1)
+      #   for: 0s
+      #   labels:
+      #     severity: info
+      #     job: test
+      #   annotations:
+      #     summary: "Test alert"
+      #     description: "Test alert to verify alert delivery pipeline"
 
