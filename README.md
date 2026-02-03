@@ -245,6 +245,9 @@ Alert validation 과정에서 다음과 같은 증적을 확보하였다.
 
 > 이 섹션에서는 서비스의 신뢰성을 측정하기 위한 SLI와 정량적 목표인 SLO를 정의한다.
 
+![slilodesign](/images/rep3-slislodesign.png)
+Figure: Relationship between metrics, SLI/SLO, error budget, and operational decision-making
+
 ### 2.3.1 Service Scope & Definition
 
 - **Service name**: 'fastapi-app'
@@ -376,9 +379,9 @@ Error Budget은 정의된 **SLO를 기준으로 허용 가능한 실패 범위**
 
 - **Error Budget = 1 - SLO Target**
 
-앞서 정의한 Availability SLO (SLo-1)를 기준으로 하면:
+앞서 정의한 Availability SLO (SLO-1)를 기준으로 하면:
 
-- **Availability SLO (SOL-1)**: ≥ 99.9%
+- **Availability SLO (SLO-1)**: ≥ 99.9%
 - **허용 가능한 Error Budget**: 30일 기분 전체 요청 중 최대 0.1%
 
 즉, SLO 평가 기간 동안 전체 요청 중 최대 0.1%ㄲ지의 HTTP 5xx 오류는 Availability SLO 위반으로 간주되지 않는다.
