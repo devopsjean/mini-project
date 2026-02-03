@@ -51,6 +51,7 @@ services:
       - ./alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
     command:
       - "--config.file=/etc/alertmanager/alertmanager.yml"
+      - "--log.level=debug"
     ports:
       - "9093:9093"
     networks:
@@ -64,6 +65,8 @@ services:
     # 포트는 필수가 아님. 충돌 피하려면 아래 ports는 주석 처리해도 됨.
     ports:
       - "9001:9001"
+    environment:
+      - PYTHONUNBUFFERED=1
     networks:
       - monitoring
 

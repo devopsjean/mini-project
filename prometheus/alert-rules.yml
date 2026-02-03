@@ -42,6 +42,7 @@ groups:
         for: 0s
         labels:
           severity: info
+          job: test
         annotations:
           summary: "Test alert"
           description: "Test alert to verify alert delivery pipeline"

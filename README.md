@@ -175,6 +175,72 @@ Alert는 SLI후보 지표인 Availavbility, Error Rate, Latency를 기반으로 
 - Alert 전달은 로컬 webhook receiver를 통해 검증되었으며, HTTP 200을 통해 실제 전송이 이루어졌음을 확인하였다.
 - 외부 서비스 (Slack,Email 등)에 의존하지 않고도 Alert 평가 및 전달 과정을 완전 재현 가능하게 구성하였다.
 
+1. **Validation Scpoe**
+
+    - Rule evaluation
+        ![ruleevaluation](/images/rep2-ruleevaluation-alert.png)
+        ![ruleevaluation](/images/rep2-ruleevaluation-rule.png)
+        Prometheus가 alert-rules.yml에 정의된 규칙을 정상적으로 평가함을 확인하였다.
+
+        TestAlwaysFiring Alert는 믿ㄱㅅDelivery pipeline 검증을 위한 용도로 사용하였으며, 검증 이후에는 rule을 피활성화하고 prometheus를 재시작하여 기존 Alert 상태를 초기화 하였다.
+
+    - State transition
+        ![statetransition](/images/rep2-statetransition.png)
+
+    - Routing/ Grouping
+        - Alertmanager 로그를 통해 APIDown Alert가 정상적으로 수신 되었으며, 설정된 'route' 및 'group_by'정책에 다라 집게(agrregation) 및 처리됨을 확인하였다.
+
+    - Delivery
+        ![delivery](/images/rep2-delivery.png)
+        - Alertmanager 로그에서 APIDown Alert에 대해 `receiver=local-webhook`으로 전송이 수행되었고 `Notify success`가 기록된 것을 확인하였다.
+        - Webhook receiver 로그에서 APIDown Alert가 포함된 payload(JSON)를 수신했으며, 해당 요청에 대해 HTTP 200 응답을 반환하여 전달 성공을 검증하였다.
+
+
+1. **Validation Result**
+
+    - Alert는 Inactive → Firing → Resolved 상태 전이를 의도한 조건에 따라 정확히 수행하였다.
+    - Alertmanager는 설정된 route 및 group_by 정책에 따라 Alert를 정상적으로 처리하였다.
+    - Webhook receiver는 Alert payload를 정상적으로 수신하였으며, HTTP 200 응답을 통해 전달 성공을 확인하였다.
+
+1. **Reprodcibility**
+
+    본  Alert 검증 환경은 외부 Slack, Email 등의 알림 채널에 즤존하지 않고 Local webhook receiver를 사용하여 구성하였다.
+
+    Alert rule, Alertmanager 설정, webhook receiver는 docker-compose 기반으로 정의 되어 있으며, 동일한 환경을 구성할 경우 누구나 동일한 Alert 검증 과정을 재현할 수 있다. 
+
+##### 2.2.3.3 Validation Evidence
+
+Alert validation 과정에서 다음과 같은 증적을 확보하였다.
+
+- **Alert State Trasition**
+    Prometheus Alerts UI를 통해 APIDown Alert가 Iantive -> Pending -> Firing 상태로 전이 되는 것을 확인 하였다.
+
+- **Alert Delivery**
+    Alertmanager 로그를 통해 APIDown Alert가 정상적으로 수신되었으며, 설정된 route 및 group-by 정책에 따라 local-webhook receiver로 전달됨을 확인하였다.
+    1. Alertmanager log
+        ![alertmanagerlog](/images/rep2-alertmanager-logs.png)
+    1. Webhook Log
+        ![webhooklog](/images/rep2-webhook-log.png)
+        - Alertmanager가 local-webhook receiver로 APIDown Alert를 POST 방식으로 전달하였다.
+    1. Alert payload JSON(excerpt)
+        Alertmanager가 webhook receiver로 전달한 Alert payload(JSON)
+
+        ```json
+        "status": "firing"
+        "labels": {
+            "alertname": "APIDown"
+            "instatnce": "api:8080"
+            "job": "api"
+            "severity": "critical"
+        };
+        ```
+
+##### 2.2.3.4 Observation & Imporovements
+
+- 'for' 값은 Alert 반응 속도와 noise 간의 trade-off가 존재하며, 운영환경에 따라 추가적인 튜닝이 필요하다.
+- p95 latency 기준값은 초기 가설로 설정되었으며, 실제 트래픽 패턴에 따라 조정이 필요하다.
+- 단일 지표 기반 Alert는 noise를 유발할 수 있으며, 향후 SLO 기반 Alert로 개선 가능하다.
+
 ### 2.3. SLI/SLO 설계
 
 #### 2.3.1. SLI 정의( 최소 3개 이상)
