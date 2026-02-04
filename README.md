@@ -101,7 +101,7 @@ Counter는 누적 값으로 트래픽 추이를 확인하는 데 사용되며,Hi
 ![datasources](images/rep2-datasources.png)
 
 Granafa에서 Prometheus를 Data Source로 등록하였다.
-Docker Compose 환경에서 서비스 간 통신을 위해 Prometheus의 내부 주소(http://prometheus:9090)을 사용하였으며, Data Source 연결 테스트를 통해 정상적으로 메트릭을 조회할 수 있음을 확인하였다.
+Docker Compose 환경에서 서비스 간 통신을 위해 Prometheus의 내부 주소(http://prometheus:9090)을 사용하였으며, Data Source 연결 테스트를 통해 정상적으로 메트릭을 조회할 수 있음을 확인.
 
 ##### 2.2.2.2 Dashboard and Panel 구성
 
@@ -147,18 +147,18 @@ Docker Compose 환경에서 서비스 간 통신을 위해 Prometheus의 내부 
 
     ![granafadashboard](/images/rep2-granafadashboard.png)
 
-    위 구성을 통해 API서비스에 대한 트래픽, 오류, 지연시간을 Grafana 대시보드에서 통합적으로 관측할 수 있음을 확인하였다. 이는 Prometheus 기반 메트릭 수집과 Grafana 시각화가 정상적으로 연동되었음을 의미하며, 서비스 상태를 실시가으로 파악할 수 있는 기본적인 Observavility 환경을 구축하였다.
+    위 구성을 통해 API서비스에 대한 트래픽, 오류, 지연시간을 Grafana 대시보드에서 통합적으로 관측할 수 있음을 확인. 이는 Prometheus 기반 메트릭 수집과 Grafana 시각화가 정상적으로 연동되었음을 의미하며, 서비스 상태를 실시가으로 파악할 수 있는 기본적인 Observavility 환경을 구축하였다.
 
 #### 2.2.3 Alerting: Prometheus Alert Rule 또는 Grafana Alert
 
 본 프로젝트에서는 서비스 신뢰성 위반을 감지하기 위해 Prometheus Alert Rule을 사용한다. Alert는 SLI 후보지표(Availabitity, Error Rate, Latency)를 기반으로 정의되며, Grafana는 Alert 분석을 위한 시각화 도구로 활용된다.
 
-주요 ALert는 다음과 같다:
+주요 Alert는 다음과 같다:
     - API Down (Availability)
     - High Error Rate (5xx)
     - High Latency (p95)
 
-Prometheus는 Alert Rule을 평가하여 Alert 이벤트를 생성하지만, 실제 알림 전송(Mail, Slack 등), 그룹핑, 중복제거는 ALertmanager가 담당한다.
+Prometheus는 Alert Rule을 평가하여 Alert 이벤트를 생성하지만, 실제 알림 전송(Mail, Slack 등), 그룹핑, 중복제거는 Alertmanager가 담당한다.
 
 ##### 2.2.3.1 Alerting Architecture
 
@@ -169,10 +169,10 @@ Alert는 SLI후보 지표인 Availavbility, Error Rate, Latency를 기반으로 
 
 ##### 2.2.3.2 Alert Validation Summary
 
-- Prometheus가 alert-rules.yml에 정의된 규칙을 정상적으로 평가함을 확인하였다.
+- Prometheus가 alert-rules.yml에 정의된 규칙을 정상적으로 평가함을 확인.
 - Alert는 Inactive -> Firing -> Resolved 상태 전이를 의도한 대로 수행하였다.
 - Alertmanager는 수신된 Alert를 설정된 기준에 따라 정상적으로 라우팅 및 그룹핑하였다.
-- Alert 전달은 로컬 webhook receiver를 통해 검증되었으며, HTTP 200을 통해 실제 전송이 이루어졌음을 확인하였다.
+- Alert 전달은 로컬 webhook receiver를 통해 검증되었으며, HTTP 200을 통해 실제 전송이 이루어졌음을 확인.
 - 외부 서비스 (Slack,Email 등)에 의존하지 않고도 Alert 평가 및 전달 과정을 완전 재현 가능하게 구성하였다.
 
 1. **Validation Scpoe**
@@ -180,7 +180,7 @@ Alert는 SLI후보 지표인 Availavbility, Error Rate, Latency를 기반으로 
     - Rule evaluation
         ![ruleevaluation](/images/rep2-ruleevaluation-alert.png)
         ![ruleevaluation](/images/rep2-ruleevaluation-rule.png)
-        Prometheus가 alert-rules.yml에 정의된 규칙을 정상적으로 평가함을 확인하였다.
+        Prometheus가 alert-rules.yml에 정의된 규칙을 정상적으로 평가함을 확인.
 
         TestAlwaysFiring Alert는 믿ㄱㅅDelivery pipeline 검증을 위한 용도로 사용하였으며, 검증 이후에는 rule을 피활성화하고 prometheus를 재시작하여 기존 Alert 상태를 초기화 하였다.
 
@@ -188,11 +188,11 @@ Alert는 SLI후보 지표인 Availavbility, Error Rate, Latency를 기반으로 
         ![statetransition](/images/rep2-statetransition.png)
 
     - Routing/ Grouping
-        - Alertmanager 로그를 통해 APIDown Alert가 정상적으로 수신 되었으며, 설정된 'route' 및 'group_by'정책에 다라 집게(agrregation) 및 처리됨을 확인하였다.
+        - Alertmanager 로그를 통해 APIDown Alert가 정상적으로 수신 되었으며, 설정된 'route' 및 'group_by'정책에 다라 집게(agrregation) 및 처리됨을 확인.
 
     - Delivery
         ![delivery](/images/rep2-delivery.png)
-        - Alertmanager 로그에서 APIDown Alert에 대해 `receiver=local-webhook`으로 전송이 수행되었고 `Notify success`가 기록된 것을 확인하였다.
+        - Alertmanager 로그에서 APIDown Alert에 대해 `receiver=local-webhook`으로 전송이 수행되었고 `Notify success`가 기록된 것을 확인.
         - Webhook receiver 로그에서 APIDown Alert가 포함된 payload(JSON)를 수신했으며, 해당 요청에 대해 HTTP 200 응답을 반환하여 전달 성공을 검증하였다.
 
 
@@ -200,13 +200,13 @@ Alert는 SLI후보 지표인 Availavbility, Error Rate, Latency를 기반으로 
 
     - Alert는 Inactive → Firing → Resolved 상태 전이를 의도한 조건에 따라 정확히 수행하였다.
     - Alertmanager는 설정된 route 및 group_by 정책에 따라 Alert를 정상적으로 처리하였다.
-    - Webhook receiver는 Alert payload를 정상적으로 수신하였으며, HTTP 200 응답을 통해 전달 성공을 확인하였다.
+    - Webhook receiver는 Alert payload를 정상적으로 수신하였으며, HTTP 200 응답을 통해 전달 성공을 확인.
 
 1. **Reprodcibility**
 
     본  Alert 검증 환경은 외부 Slack, Email 등의 알림 채널에 즤존하지 않고 Local webhook receiver를 사용하여 구성하였다.
 
-    Alert rule, Alertmanager 설정, webhook receiver는 docker-compose 기반으로 정의 되어 있으며, 동일한 환경을 구성할 경우 누구나 동일한 Alert 검증 과정을 재현할 수 있다. 
+    Alert rule, Alertmanager 설정, webhook receiver는 docker-compose 기반으로 정의 되어 있으며, 동일한 환경을 구성할 경우 누구나 동일한 Alert 검증 과정을 재현할 수 있다.
 
 ##### 2.2.3.3 Validation Evidence
 
@@ -216,7 +216,7 @@ Alert validation 과정에서 다음과 같은 증적을 확보하였다.
     Prometheus Alerts UI를 통해 APIDown Alert가 Iantive -> Pending -> Firing 상태로 전이 되는 것을 확인 하였다.
 
 - **Alert Delivery**
-    Alertmanager 로그를 통해 APIDown Alert가 정상적으로 수신되었으며, 설정된 route 및 group-by 정책에 따라 local-webhook receiver로 전달됨을 확인하였다.
+    Alertmanager 로그를 통해 APIDown Alert가 정상적으로 수신되었으며, 설정된 route 및 group-by 정책에 따라 local-webhook receiver로 전달됨을 확인.
     1. Alertmanager log
         ![alertmanagerlog](/images/rep2-alertmanager-logs.png)
     1. Webhook Log
@@ -397,9 +397,249 @@ Error Budget은 서비스 운영 시 우선 순위를 결정하기 위한 기준
 
 ### 2.4. 장애 시나리오 및 Incident Response
 
-- API서버를 활용해 의도적으로 장애를 발생
-- Alert가 정적으로 동작하는 것을 확인
-- 장애 발생부터 복구까지의 흐름을 문서로 정리
+이 섹션에서는 서비스 운영 중 발생할 수 있는 장애를 의도적으로 재현하고, 장애 감지부터 복구 및 학습까지의 Incident Response 흐름을 SRE 관점에서 정리한다. 본 목적은 장애 자체가 아니라, 장애를 어떻게 인지하고 관리했는지를 보여주는 데 있다.
+
+#### 2.4.1 Incident Scenario Overview
+
+##### 2.4.1.1 **목적**
+
+본 장애 시나리오의 목적은 실제 운영 환경에서 발생할 수 있는 단일하고 현실적인 장애 상황을 재현하고, 사전에 정의한 SLI/SLO 기반 Alert이 정상적으로 동작하는지를 검증하는 데 있다.
+
+구체적으로는 다음을  목표로 한다.
+
+- 실제 운영 환경에서 발생 할 수 있는 현실적인 단일 장애를 선택
+- 기존에 정의한 SLI/SLO와 직접적으로 연결되는 장애 상황 재현
+- 장애 발생 부터 Alert -> Response -> Recovery까지의 Incident Response 흐름 검증.
+
+본 섹션은 장애를 '만드는 것'이 아니라, 장애를 어떻게 인지하고 관리했는지를 보여주는 데 중점을 둔다.
+
+#### 2.4.2.2 **선택한 장애 시나리오**
+
+- Scenario:  API서버에서 HTTP 5xx 오류 지속 발생하는 상황
+- 유형: Server-side failure
+- 의도: Availability/ Error Rate SLI 위한 상황 재현
+
+본 시나리오는 서비스 신뢰성에 직접적인 영향을 주는 대표적인 서버 장애 유형으로, 사용자 관점에서 "요청이 실패한다"는 명확한 증상을 가지며, Availability SLO 및 Error Rate와 명확하게 연결된다.
+
+> 시스템 복잡도를 최소화하기 위해 본 실험에서는 단일 장애 시나리오만을 대상으로 한다.
+
+#### 2.4.2 Failure Injection(장애 유도)
+
+##### 2.4.2.1 **장애 유도 방식**
+
+장애는 API 서비의 /error 엔드포인트를 활용하여 의도적으로 HTTP 500 응답을 일정 시간동안 반복 요청을 발생시켜 의도적으로 오류 트래픽을 유지.
+
+- /error 엔드포인트 호출시 항상 HTTP 500 반환
+
+    ```bash
+    curl -i http://localhost:8080/error
+    ```
+
+    ![curl500error](/images/rep4-2421-curl500error1.png)
+- 일정 시간 동안 반복적인 요청을 발생 시켜 Error Rate 상승 유도
+
+  - 아래 명령은 일정 시간 동안 오류 요청을 반복 발생시켜 Error Rate SLI가 Alert Rule 조건을 충족하도록 설계했다.
+  
+    ```bash
+    docker compose run --rm loadgen sh -lc '
+    end=$(( $(date +%s) + 30 ))
+    i=0
+    while [ $(date +%s) -lt $end ]; do
+      i=$((i+1))
+      code=$(curl -s -o /dev/null -w "%{http_code}" http://api:8080/error)
+      printf "%s #%03d code=%s\n" "$(date "+%H:%M:%S")" "$i" "$code"
+      sleep 0.2
+    done
+    '
+    ```
+
+    ![curl500error](/images/rep4-2421-curl500error2.png)
+
+- 정상 트래픽과 구분되는 의도적 서버 오류 패턴 생성
+
+    ![curl500error](/images/rep4-2421-curl500errorpattern.png)
+
+본 장애 유도 방식은 재현 가능하며, 실험 종료 후 즉시 정상 상태로 복구할 수 있도록 설계되었다. 동일한 docker-compose 환경에서는 별도 도구 설치 없이 누구나 재현 가능하다.
+
+##### 2.4.2.2 **기대 효과**
+
+- HTTP 5xx 응답 증가로 Error Rate (5xx) SLI상승
+- Availability SLO에 영향을 주는 조건 충족
+- Error Rate 기반 Prometheus Alert Rule 트리거
+
+이를 통해 Alert가 단순한 임계치 초과가 아니라, SLO 보호 목적에 따라 정상적으로 동작하는지를 검증할 수 있다.
+
+> 본 장애는 실험 목적에 한해 의도적으로 주입되었으며, 동일한 환경에서는 누구나 재현 가능하도록 설계되었다.
+
+#### 2.4.3 Detection (장애 감지)
+
+##### 2.4.3.1 **감지 수단**
+
+본 장애는 Prometheus Alert Rule(alert-rules.yml)을 통해 감지되었다.
+
+- **Alerting system**: Prometheus Alert Rule
+
+    ```yaml
+    - alert: HighErrorRate
+        expr: |
+          (
+            sum(rate(http_requests_total{status=~"5.."}[5m]))
+            /
+            sum(rate(http_requests_total[5m]))
+          ) > 0.05
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High 5xx error rate detected"
+          description: "More than 5% of requests are failing with 5xx errors."
+    ```
+
+- Alert name: 'HigherrorRate'
+
+  ![alertnamehigherrorrate](/images/rep4-2422-alertnamehigherrorrate.png)
+
+해당 Alert는 API 서비스의 Error Rate (HTTP 5xx)를 지속적으로 관측하며, 사전에 정의한 SLI/SLO 기준을 벗어나는 경우 Incident를 감지하도록 설계되었다.
+
+##### 2.4.3.2 **감지 과정**
+
+장애 유도 이후 다음과 같은 감지 과정이 수행되었다.
+
+- API 서버에서 HTTP 5xx응답이 지속적으로 발생
+
+  ```bash
+  docker compose -f --timestamps api
+  ```
+  ![api500logs](/images/rep4-2422-api500logs.png)
+- Error Rate (5xx) SLI가 정의된 임계치를 초과
+- Prometheus Alert Rule 평가 결과에 따라 Alert 상태 전이 발생
+
+Alert의 상태는 다음 순서로 전이 되었다.
+
+> Inactive -> Pending -> Firing
+
+이는 일시적인 오류가 아닌, 지속적인 SLI 위한 상황임을 확인하기 위한 'for'조건이 정상적으로 적용되었음을 의미한다.
+
+##### 2.4.3.3 **감지 시간**
+
+- 장애 발생 시점 기준 약 N분후 Alert가 Firing 상태로 전이
+- 감지 지연은 Alert Rule에 정의된 'for' 조건에 따른 정상적인 동작으로 판단 됨
+
+본 감지 시간은 **즉각적인 반응성과 Alert noise 최소화 간의 trade-off**를 고려한 설계 결과이다.
+
+> 본 Alert는 단순히 특정 임계값을 초과했기 떄문에 발생한 것이 아니, Availability SLO를 보호하기 위해 Error Rate SLI를 기준으로 설계된 Alert이다.
+
+#### 2.4.4 Impact Analysis (영향 분석)
+
+##### 2.4.4.1 **사용자 영향**
+
+장애 발생 기간 동안 API 서버에서 HTTP 5xx 오류가 지속적으로 발생함에 딸, 일부 클라이언트 요청이 정상적으로 처리 되지 못하였다.
+
+- 일부 API 요청이 HTTP 500 응답으로 실패
+- 정상 응답을 기대하는 클라이언트 요청 처리 불가
+- 사용자 관점에서 요청 실패가 명확하게 인지되는 상태
+
+본 장애는 서버 측 오류로 인해 발생하였으며, 클라이언트 재시도 여부와 관계없이 서비스 신뢰성 저하로 인식될 수 있는 장애로 분류된다.
+
+##### 2.4.4.2 **SLO 영향**
+
+본 장애는 사전에 정의한 SLO 중 Availability SLO 및 Error Rate SLI에 영향을 미쳤다.
+
+- **Availability SLO**
+  - 장애 지속 시간 동안 성공 요청 비율이 감소하여 SLO 위반 또는 위반에 근접한 상태로 평가된 (실제 측정 결과에 따라 위반 여부를 명시한다)
+
+- **Error Budget 소모 발생**
+  - HTTP 5xx 응답 증가로 인해 Error Budget이 일부 소모됨
+
+본 영향 분석은 단일 장애 이벤트 자체 보다는, SLO평가 기간(Rolling window) 내에서의 누적 영향을 기준으로 판단하였다.
+
+> 본 장애는 사용자 경험에 직접적인 영향을 주는 **신뢰성 관점의 장애**로 분류 된다.
+---
+
+#### 2.4.5 Response (대응)
+
+##### 2.4.5.1 **초기 대응**
+
+Alert 발생 이후, 우선적으로 **서비스 상태 및 장애 범위 확인**을 수행하였다.
+
+- Grafana Dashboard를 통해 Error Rate (5xx) 및 전체 요청 상태 확인
+- 장애가 단일 엔드포인트에 국한된 문제인지, 서비스 전반에 영향을 주는지 확인
+- 오류가 일시적인 스파이크인지, 지속적으로 발생하는지 여부 확인
+
+초기 대응 단계에서는 **즉각적인 조치보다 상황 파악을 우선**하여, 불필요한 대응이나 오판을 방지하는 데 중점을 두었다.
+
+##### 2.4.5.2 **조치 내용**
+
+장애 원인이 의도적으로 주입된 오류임을 확인한 이후, 다음과 같은 조치를 수행하였다.
+
+- 장애유도 로직 확인
+- 의도적 장애 주입 중단
+  - /error 엔드포인트 호출 중단
+  - 또는 API서비스 재시작을 통한 정상 상태 복구
+
+조치는 서비스의 정상 동작을 회복시키는 데 필요한 최소한의 범위로 제한하였다.
+
+##### 2.4.5.3 **대응 방식**
+
+- 대응 유형: 수동 대응
+- 대응 기준: Runbook 기반의 표준 점검 절차 수행
+
+본 대응은 자동 복구가 아닌, **Incident Response 흐름 검증을 위한 수동 개입**으로 수행되었다.
+
+모든 대응 과정은 원인 분석과 재발 방지를 목적으로 하였으며, 개인 또는 특정 구성 요소에 책임을 전가하지 않는 **Blame-free 원칙**을 유지하였다.
+
+> 본 대응 과정에서 Blame-free 원칙을 유지하였다.
+---
+
+#### 2.4.6 Recovery (복구)
+
+##### 2.4.6.1 **복구 시점**
+
+장애 유도 중단 이후 API 서비스의 정상 응답이 확인 되었으며, 이에 따라 Alert 상태가 정상적으로 해제되었다.
+
+- 장애 유도 중단 후 정상 응답 확인
+- Alert 상태 전이: 'firing -> Resolved'
+
+이는 Error Rate SLI가 정의된 정상 범위로 복귀했음을 의미한다.
+
+##### 2.4.6.2 **회복 지표**
+
+복구 여부는 개별 요청의 성공 여부가 아니라, **사전에 정의한 SLI/SLO 기준**을 통해 판단하였다.
+
+- **Error Rate SLI**: 정상 범위 복귀
+- **Availability 지표**: 안정화
+
+해당 지표들은 Grafana Dashboard 및 Prometheus 데이터를 통해 확인 되었다.
+
+> 서비스는 정의된 **SLO 기준 내의 정상 상태로 복구** 되었다.
+---
+
+#### 2.4.7 Lessons Learned
+
+##### 2.4.7.1 **잘 된 점**
+
+- Error Rate 기반 Alert가 Availability SLO 위반 징후를 조기에 감지함
+- 장애 발생 -> 감지 -> 대응 -> 복구까지의 Incident Response 흐름이 명확하게 검증됨
+- SLI/SLO를 기준으로 장애의 영향과 복구 여부를 일관되게 판단할 수 있었음
+
+본 실험을 통해 Alert가 단순한 알림이 아니라, **서비스 신뢰성을 보호하기 위한 운영 도구**로 기능함을 확인.
+
+##### 2.4.7.2 **개선 할 점**
+
+- 단일 지표(Error Rate) 기반 Alert은 상황에 따라 noise를 유발할 수 있음
+- Alert 조건이 SLI중심으로 구성되어 있어, SLO 관점에서의 장기적 신뢰성 판단에는 한계가 존재함
+
+이에 따라 향후에는 다음과 같은 개선 여지가 있다.
+
+- SLO기반 Alert 도입
+- Multi-window/ Multi-burn-rate Alert를 통한 false positive 감소
+
+##### 2.4.7.3 **향후 계획**
+
+- Latency(p95) 기반 장애 시나리오를 추가하여 응답 지연이 사용자 경험에 미치는 영향을 추가적으로 검증
+- Incident Response 과정에서 반복적으로 수행되는 절차를 Runbook 형태로 문서화 및 확장
+
+이를 통해 단일 장애 대응을 넘어, 지속 가능한 신뢰성 운영 체계로 확장하는 것을 목표로 한다.
 
 ### 2.5. RCA (Root Cause Analysis)
 

@@ -1,3 +1,8 @@
+version: '3.9'
+
+x-common-env: &common-env
+  TZ: Asia/Seoul
+
 services:
   api:
     build:
@@ -5,6 +10,8 @@ services:
     container_name: api
     ports:
       - "8080:8080"
+    environment:
+      <<: *common-env
     networks:
       - monitoring
 
@@ -17,6 +24,8 @@ services:
       - "--web.enable-lifecycle"
     ports:
       - "9090:9090"
+    environment:
+      <<: *common-env
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ./prometheus/alert-rules.yml:/etc/prometheus/alert-rules.yml:ro
@@ -31,8 +40,10 @@ services:
     image: grafana/grafana:10.2.3
     container_name: grafana
     environment:
-      - GF_SECURITY_ADMIN_USER=admin
-      - GF_SECURITY_ADMIN_PASSWORD=admin
+      <<: *common-env
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_DATE_FORMATS_DEFAULT_TIMEZONE: Asia/Seoul
     ports:
       - "3000:3000"
     volumes:
@@ -54,6 +65,8 @@ services:
       - "--log.level=debug"
     ports:
       - "9093:9093"
+    environment:
+      <<: *common-env
     networks:
       - monitoring
     depends_on:
@@ -66,7 +79,12 @@ services:
     ports:
       - "9001:9001"
     environment:
-      - PYTHONUNBUFFERED=1
+      <<: *common-env
+      PYTHONUNBUFFERED: 1
+    networks:
+      - monitoring
+  loadgen:
+    image: curlimages/curl:8.5.0
     networks:
       - monitoring
 
