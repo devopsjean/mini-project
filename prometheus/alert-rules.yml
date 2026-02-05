@@ -1,42 +1,74 @@
+# Prometheus alert rules (SRE mini-project)
+# - Purpose: validate alert evaluation -> Alertmanager routing/grouping -> delivery (local webhook)
+# - Philosophy: alerts are tied to SLI candidates (Availability, Error Rate, Latency) and tuned to reduce noise.
+
 groups:
   - name: sre-mini-project-alerts
+    # Grouping makes it easier to manage rules as a single "unit" in reviews and experiments.
     rules:
+      # Availability / liveness signal
       - alert: APIDown
+        # 'up' is produced by Prometheus for every scrape target.
+        # If the API target cannot be scraped, 'up' becomes 0.
         expr: up{job="api"} == 0
+
+        # Trade-off: faster detection vs false positives during brief restarts.
+        # 1m reduces alert noise from transient scrape failures.
         for: 1m
+
         labels:
+          # Critical because the service is considered unavailable.
           severity: critical
+
         annotations:
+          # Human-facing context for incident responders.
           summary: "API service is down"
           description: "API has not been reachable for more than 1 minute."
 
+      # Error Rate SLI candidate (5xx / total)
       - alert: HighErrorRate
+        # Measures proportion of server-side failures.
+        # Window choice: 5m smooths short spikes and provides stable SLI evaluation.
         expr: |
           (
             sum(rate(http_requests_total{status=~"5.."}[5m]))
             /
             sum(rate(http_requests_total[5m]))
           ) > 0.05
+
+        # Requires sustained breach to avoid firing on brief error bursts.
+        # (Noise vs responsiveness trade-off)
         for: 2m
+
         labels:
           severity: warning
+
         annotations:
           summary: "High 5xx error rate detected"
           description: "More than 5% of requests are failing with 5xx errors."
 
+      # Latency SLI candidate (p95 tail latency)
       - alert: HighLatencyP95
+        # Uses histogram_quantile over request duration buckets.
+        # p95 is chosen to reflect user-impacting tail latency (not just average latency).
         expr: |
           histogram_quantile(
             0.95,
             sum(rate(http_request_duration_seconds_bucket[5m])) by (le)
           ) > 0.3
+
+        # Slightly longer 'for' to reduce flapping from intermittent slow requests.
         for: 3m
+
         labels:
           severity: warning
+
         annotations:
           summary: "High API latency (p95)"
           description: "p95 latency has exceeded 300ms for more than 3 minutes."
-      
+
+      # Test-only rule to validate delivery pipeline end-to-end.
+      # Keep disabled by default to avoid permanent noise in normal runs.
       # - alert: TestAlwaysFiring
       #   expr: vector(1)
       #   for: 0s
@@ -46,4 +78,3 @@ groups:
       #   annotations:
       #     summary: "Test alert"
       #     description: "Test alert to verify alert delivery pipeline"
-

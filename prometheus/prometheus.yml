@@ -1,21 +1,41 @@
+# Prometheus configuration (demo / local reproducibility)
+# - Purpose: scrape application metrics and evaluate alert rules for SRE experiments.
+# - Stack: runs inside docker-compose network, targets are resolved by service names.
+
 global:
+  # Scrape interval controls how often Prometheus pulls metrics from targets.
+  # - 15s is a demo-friendly default: fast feedback without excessive scrape load.
   scrape_interval: 15s
+
+  # Rule evaluation interval controls how often Prometheus evaluates alert rules.
+  # - Keep it aligned with scrape_interval for predictable alert behavior in this project.
   evaluation_interval: 15s
 
+# Alert rules loaded from a mounted file (config-as-code).
+# - Enables reproducible alert validation without manual UI changes.
 rule_files:
   - /etc/prometheus/alert-rules.yml
 
 scrape_configs:
+  # Self-scrape: useful to confirm Prometheus itself is up and exporting metrics.
   - job_name: "prometheus"
     static_configs:
+      # 'prometheus:9090' is the docker-compose service name + container port.
       - targets: ["prometheus:9090"]
 
+  # Application scrape job (service under test)
   - job_name: "api"
+    # FastAPI exposes Prometheus metrics at /metrics (not /).
     metrics_path: /metrics
     static_configs:
+      # 'api:8080' matches docker-compose service name 'api' and its container port.
       - targets: ["api:8080"]
 
+# Alert delivery configuration
+# - Prometheus evaluates alert rules and sends alert events to Alertmanager.
+# - Alertmanager is responsible for routing/grouping/dedup and delivery to receivers.
 alerting:
   alertmanagers:
     - static_configs:
+        # 'alertmanager:9093' is the docker-compose service name + Alertmanager port.
         - targets: ["alertmanager:9093"]
