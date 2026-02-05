@@ -1,0 +1,30 @@
+apiVersion: 1
+
+# (Optional) If you have duplicates (one created via UI, one provisioned),
+# you can remove the UI-created datasource automatically.
+# NOTE: The "name" must match exactly what you see in Grafana UI.
+# deleteDatasources:
+#   - name: prometheus
+#     orgId: 1
+
+datasources:
+  - name: rometheus
+    # IMPORTANT: Stable UID used by dashboards (sre-dashboard.json datasource.uid must match)
+    uid: prometheus
+
+    type: prometheus
+
+    # Use Grafana server-side proxy to reach Prometheus inside the Docker network
+    access: proxy
+
+    # Docker-compose service name + internal port (NOT localhost)
+    url: http://prometheus:9090
+
+    # Make this the default datasource for the org
+    isDefault: true
+
+    # Prevent accidental UI edits (recommended for "dashboards as code")
+    editable: false
+
+    # (Optional) Helps provisioning updates; bump when you intentionally change settings
+    version: 1

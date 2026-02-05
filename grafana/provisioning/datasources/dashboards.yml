@@ -1,0 +1,19 @@
+apiVersion: 1
+
+providers:
+  - name: "mini-project"
+    type: file
+
+    # Show these dashboards under a dedicated folder in Grafana UI
+    folder: "mini-project"
+    folderUid: "mini-project"
+
+    # Keep dashboards managed as code (prevent accidental UI edits)
+    editable: true
+
+    # Periodically rescan for JSON updates (useful during iteration)
+    updateIntervalSeconds: 30
+
+    options:
+      # Must match the container path where dashboards JSON files are mounted
+      path: /var/lib/grafana/dashboards
