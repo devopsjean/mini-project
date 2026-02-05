@@ -7,7 +7,7 @@
 - 장애 유도 및 대응
 - RCA 문서화
 
-를 목표로 하는 미니프로젝트 입니다.
+를 목표로 하는 미니 프로젝트입니다.
 
 ## 구조
 
@@ -17,7 +17,7 @@
 
 ### 2.1. 서비스(API) - Verification
 
-본 API는 신뢰성 테스트 목적의 서비스로, 정상 응답/ 의도적 지연/ 의도적 5xx 오류를 재현할 수 있다.
+본 API는 신뢰성 테스트 목적의 서비스로, 정상 응답/의도적 지연/의도적 5xx 오류를 재현할 수 있다.
 
 #### 2.1.1 정상 응답
 
@@ -52,14 +52,14 @@ curl -i http://localhost:8080/error
 
 ![errorcheck](images/rep1-error.png)
 
-### 2.2. Obervability 스택
+### 2.2. Observability 스택
 
 본 프로젝트는 Metrics 기반 관측 가능성(Observability)을 목표로 하며, 아래 구성으로 수집/시각화/알림을 구현합니다.
 
 #### 2.2.1 Metrics: Prometheus
 
-API는 /metrics에서 Prometheus 형식의 메트릭을 노출하며, Prometheus는 해당 엔드포인트를 scrape 하여 시계열 데이터로 저장한다.
-본 프로젝트에서는 API의 요청 수/지연 시간/오류 응답 같은 신뢰성 지표(SLI 후보) 를 수집하기 위해 Prometheus를 사용합니다.
+API는 /metrics에서 Prometheus 형식의 메트릭을 노출하며, Prometheus는 해당 엔드포인트를 scrape하여 시계열 데이터로 저장한다.
+본 프로젝트에서는 API의 요청 수/지연시간/오류 응답 같은 신뢰성 지표(SLI 후보)를 수집하기 위해 Prometheus를 사용합니다.
 
 ##### 2.2.1.1 API and prometheus metrics structure
 
@@ -78,29 +78,29 @@ scrape_interval=15s는 데모 환경에서 메트릭 반응성을 확보하면�
 
 ![prometheus](images/rep2-prometheus-metrics.png)
 
-사용자가 확인하는 URL은 http://localhost:9090/metrics 이며, Prometheus는 docker network 내부에서 http://prometheus:9090/metrics 를 scrape 하는 주체으로 사용한다.
+사용자가 확인하는 URL은 http://localhost:9090/metrics 이며, Prometheus는 docker network 내부에서 http://prometheus:9090/metrics 를 scrape 하는 주체로 사용한다.
 
-##### 2.2.1.4 quary at prometheus graph
+##### 2.2.1.4 query at prometheus graph
 
-![quary](images/rep2-quary.png)
+![query](images/rep2-query.png)
 
 - http_requests_total: Counter (누적 요청 수)
-- http_request_duration_seconds: Histogram (지연 시간 분포)
+- http_request_duration_seconds: Histogram (지연시간 분포)
 
-Counter는 누적 값으로 트래픽 추이를 확인하는 데 사용되며,Histogram은 p95/p99 지연 시간과 같은 SLO 계산의 기반이 된다.
+Counter는 누적 값으로 트래픽 추이를 확인하는 데 사용되며,Histogram은 p95/p99 지연시간과 같은 SLO 계산의 기반이 된다.
 해당 메트릭들은 이후 SLI/SLO 정의(가용성, 지연시간) 및 Alert Rule의 기반으로 사용된다.
 
 #### 2.2.2 Visualization: Grafana
 
 ![visualization](images/rep2-visualizationgranafa.png)
 
-본 구조에서는 API가 /metrics 엔드포인트를 통해 메트릭을 노출하고, Prometheus가 이를 주기적으로 수집하여 TSDB에 저장한다. Grafana는 Prometheus의 Query API에 PromQL 요청을 전달하며, Prometheus는 내부 TSDB에서 시계열 데이터를 조회한 뒤 PromQL 연산을 수행하고, 계산된 결과를 Grafan에 반환한다.
+본 구조에서는 API가 /metrics 엔드포인트를 통해 메트릭을 노출하고, Prometheus가 이를 주기적으로 수집하여 TSDB에 저장한다. Grafana는 Prometheus의 Query API에 PromQL 요청을 전달하며, Prometheus는 내부 TSDB에서 시계열 데이터를 조회한 뒤 PromQL 연산을 수행하고, 계산된 결과를 Grafana에 반환한다.
 
 ##### 2.2.2.1 Data Source
 
 ![datasources](images/rep2-datasources.png)
 
-Granafa에서 Prometheus를 Data Source로 등록하였다.
+Grafana에서 Prometheus를 Data Source로 등록하였다.
 Docker Compose 환경에서 서비스 간 통신을 위해 Prometheus의 내부 주소(http://prometheus:9090)을 사용하였으며, Data Source 연결 테스트를 통해 정상적으로 메트릭을 조회할 수 있음을 확인.
 
 ##### 2.2.2.2 Dashboard and Panel 구성
@@ -109,7 +109,7 @@ Docker Compose 환경에서 서비스 간 통신을 위해 Prometheus의 내부 
 
     ![trafficrps](images/rep2-trafficrps.png)
 
-    Traffic 패널은 API에 유입되는 요청량을 초당 요청수(RPS)기준으로 시각화 한다.
+    Traffic 패널은 API에 유입되는 요청량을 초당 요청수(RPS) 기준으로 시각화 한다.
     요청량의 변화는 서비스 부하 상태를 판단하는 기본 관측 지표로 활용한다.
 
 1. **Error Rate (5xx)**
@@ -123,7 +123,7 @@ Docker Compose 환경에서 서비스 간 통신을 위해 Prometheus의 내부 
     sum(rate(http_requests_total[5m]))
     ```
 
-    현재 환경에서는 HTTP 5xx응답이 발생하지 않아 에러율은 0에 수렴하는 값을 보인다. 이는 서비스가 정상 상태임을 의미하며, 장애 발생시 해당 패널을 통해 즉각적인 이상탐지가 가능하다.
+    현재 환경에서는 HTTP 5xx 응답이 발생하지 않아 에러율은 0에 수렴하는 값을 보인다. 이는 서비스가 정상 상태임을 의미하며, 장애 발생 시 해당 패널을 통해 즉각적인 이상 탐지가 가능하다.
 
     ![errorrate](images/rep2-errorrate.png)
 
@@ -139,7 +139,7 @@ Docker Compose 환경에서 서비스 간 통신을 위해 Prometheus의 내부 
     ```
 
     - API 요청 시 p95 지연시간이 시간 흐름에 따라 변화
-    - Histogram 기반 metric이 정상적으로 집게됨을 확인
+    - Histogram 기반 metric이 정상적으로 집계됨을 확인
 
     ![latencyp95](images/rep2-latencyp95.png)
 
@@ -147,48 +147,48 @@ Docker Compose 환경에서 서비스 간 통신을 위해 Prometheus의 내부 
 
     ![granafadashboard](/images/rep2-granafadashboard.png)
 
-    위 구성을 통해 API서비스에 대한 트래픽, 오류, 지연시간을 Grafana 대시보드에서 통합적으로 관측할 수 있음을 확인. 이는 Prometheus 기반 메트릭 수집과 Grafana 시각화가 정상적으로 연동되었음을 의미하며, 서비스 상태를 실시가으로 파악할 수 있는 기본적인 Observavility 환경을 구축하였다.
+    위 구성을 통해 API 서비스에 대한 트래픽, 오류, 지연시간을 Grafana 대시보드에서 통합적으로 관측할 수 있음을 확인. 이는 Prometheus 기반 메트릭 수집과 Grafana 시각화가 정상적으로 연동되었음을 의미하며, 서비스 상태를 실시간으로 파악할 수 있는 기본적인 Observability 환경을 구축하였다.
 
 #### 2.2.3 Alerting: Prometheus Alert Rule 또는 Grafana Alert
 
-본 프로젝트에서는 서비스 신뢰성 위반을 감지하기 위해 Prometheus Alert Rule을 사용한다. Alert는 SLI 후보지표(Availabitity, Error Rate, Latency)를 기반으로 정의되며, Grafana는 Alert 분석을 위한 시각화 도구로 활용된다.
+본 프로젝트에서는 서비스 신뢰성 위반을 감지하기 위해 Prometheus Alert Rule을 사용한다. Alert는 SLI 후보지표(Availability, Error Rate, Latency)를 기반으로 정의되며, Grafana는 Alert 분석을 위한 시각화 도구로 활용된다.
 
 주요 Alert는 다음과 같다:
     - API Down (Availability)
     - High Error Rate (5xx)
     - High Latency (p95)
 
-Prometheus는 Alert Rule을 평가하여 Alert 이벤트를 생성하지만, 실제 알림 전송(Mail, Slack 등), 그룹핑, 중복제거는 Alertmanager가 담당한다.
+Prometheus는 Alert Rule을 평가하여 Alert 이벤트를 생성하지만, 실제 알림 전송(Mail, Slack 등), 그룹화, 중복제거는 Alertmanager가 담당한다.
 
 ##### 2.2.3.1 Alerting Architecture
 
 ![alteringarchitecture](/images/rep2-alertingarchitecture.png)
 
-본 프로젝트에서는 서비스 신뢰서 위반을 감지하기 우해 Prometheus Alert Rule을 사용한다.
-Alert는 SLI후보 지표인 Availavbility, Error Rate, Latency를 기반으로 정의된다.
+본 프로젝트에서는 서비스 신뢰성 위반을 감지하기 위해 Prometheus Alert Rule을 사용한다.
+Alert는 SLI 후보 지표인 Availability, Error Rate, Latency를 기반으로 정의된다.
 
 ##### 2.2.3.2 Alert Validation Summary
 
 - Prometheus가 alert-rules.yml에 정의된 규칙을 정상적으로 평가함을 확인.
 - Alert는 Inactive -> Firing -> Resolved 상태 전이를 의도한 대로 수행하였다.
-- Alertmanager는 수신된 Alert를 설정된 기준에 따라 정상적으로 라우팅 및 그룹핑하였다.
+- Alertmanager는 수신된 Alert를 설정된 기준에 따라 정상적으로 라우팅 및 그룹화하였다.
 - Alert 전달은 로컬 webhook receiver를 통해 검증되었으며, HTTP 200을 통해 실제 전송이 이루어졌음을 확인.
-- 외부 서비스 (Slack,Email 등)에 의존하지 않고도 Alert 평가 및 전달 과정을 완전 재현 가능하게 구성하였다.
+- 외부 서비스 (Slack, Email 등)에 의존하지 않고도 Alert 평가 및 전달 과정을 완전 재현 가능하게 구성하였다.
 
-1. **Validation Scpoe**
+1. **Validation Scope**
 
     - Rule evaluation
         ![ruleevaluation](/images/rep2-ruleevaluation-alert.png)
         ![ruleevaluation](/images/rep2-ruleevaluation-rule.png)
         Prometheus가 alert-rules.yml에 정의된 규칙을 정상적으로 평가함을 확인.
 
-        TestAlwaysFiring Alert는 믿ㄱㅅDelivery pipeline 검증을 위한 용도로 사용하였으며, 검증 이후에는 rule을 피활성화하고 prometheus를 재시작하여 기존 Alert 상태를 초기화 하였다.
+        TestAlwaysFiring Alert는 Alert Delivery pipeline 검증을 위한 용도로 사용하였으며, 검증 이후에는 rule을 비활성화하고 prometheus를 재시작하여 기존 Alert 상태를 초기화하였다.
 
     - State transition
         ![statetransition](/images/rep2-statetransition.png)
 
     - Routing/ Grouping
-        - Alertmanager 로그를 통해 APIDown Alert가 정상적으로 수신 되었으며, 설정된 'route' 및 'group_by'정책에 다라 집게(agrregation) 및 처리됨을 확인.
+        - Alertmanager 로그를 통해 APIDown Alert가 정상적으로 수신 되었으며, 설정된 'route' 및 'group_by'정책에 따라 집계(aggregation) 및 처리됨을 확인.
 
     - Delivery
         ![delivery](/images/rep2-delivery.png)
@@ -202,7 +202,7 @@ Alert는 SLI후보 지표인 Availavbility, Error Rate, Latency를 기반으로 
     - Alertmanager는 설정된 route 및 group_by 정책에 따라 Alert를 정상적으로 처리하였다.
     - Webhook receiver는 Alert payload를 정상적으로 수신하였으며, HTTP 200 응답을 통해 전달 성공을 확인.
 
-1. **Reprodcibility**
+1. **Reproducibility**
 
     본  Alert 검증 환경은 외부 Slack, Email 등의 알림 채널에 즤존하지 않고 Local webhook receiver를 사용하여 구성하였다.
 
@@ -229,7 +229,7 @@ Alert validation 과정에서 다음과 같은 증적을 확보하였다.
         "status": "firing"
         "labels": {
             "alertname": "APIDown"
-            "instatnce": "api:8080"
+            "instance": "api:8080"
             "job": "api"
             "severity": "critical"
         };
@@ -505,7 +505,7 @@ Error Budget은 서비스 운영 시 우선 순위를 결정하기 위한 기준
 
 장애 유도 이후 다음과 같은 감지 과정이 수행되었다.
 
-- API 서버에서 HTTP 5xx응답이 지속적으로 발생
+- API 서버에서 HTTP 5xx 응답이 지속적으로 발생
 
   ```bash
   docker compose -f --timestamps api
@@ -597,7 +597,7 @@ HighErrorRate Alert는 Prometheus Alerts API를 통해 평가되었다.
   - 장애 지속 시간 동안 성공 요청 비율이 감소하여 SLO 위반 또는 위반에 근접한 상태로 평가된
 
 - **Error Budget 소모 발생**
-  - Error Rate(5xx)가 0.6이상으로 상승한 구간이 관측되었으며, Avaiability. 정의(1 - error Rate)에 따라 성공 성공 요청 비율은 40% 이하로 급격히 감소한 상태로 해벅할 수 있다.
+  - Error Rate(5xx)가 0.6이상으로 상승한 구간이 관측되었으며, Availability. 정의(1 - error Rate)에 따라 성공 성공 요청 비율은 40% 이하로 급격히 감소한 상태로 해벅할 수 있다.
   
   앞서 정의한 Availability SLO는 Success Rate를 기준으로 하며
   (참고: [2.3.4 SLO definitions](#234-slo-definitions),
@@ -630,7 +630,7 @@ Alert 발생 이후, 우선적으로 **서비스 상태 및 장애 범위 확인
 - 장애유도 로직 확인
 - 의도적 장애 주입 중단
   - `/error` 엔드포인트 호출 중단
-  - 또는 API서비스 재시작을 통한 정상 상태 복구
+  - 또는 API 서비스 재시작을 통한 정상 상태 복구
 
 조치는 서비스의 정상 동작을 회복시키는 데 필요한 최소한의 범위로 제한하였다.
 
@@ -781,10 +781,3 @@ Alert 감지까지의 지연은 Alert Rule에 정의된 'for' 조건에 따른 �
     - p95 latency 상승이 사용자 경험에 미치는 영향 검증
   - **Incident 대응 절차의 Runbook화**
     - 감지 → 판단 → 대응 → 복구 단계를 명문화하여 재현성 확보
-
-## Project Context (for AI assistants)
-
-- This is an SRE mini project using docker-compose
-- Prometheus and Grafana are already running with provisioning
-- API is FastAPI exposing /health and /metrics
-- Current issue: API container not listening on port 8080
