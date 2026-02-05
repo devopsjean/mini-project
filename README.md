@@ -442,7 +442,7 @@ Error Budget은 서비스 운영 시 우선 순위를 결정하기 위한 기준
   
     ```bash
     docker compose run --rm loadgen sh -lc '
-    end=$(( $(date +%s) + 30 ))
+    end=$(( $(date +%s) + 120 ))
     i=0
     while [ $(date +%s) -lt $end ]; do
       i=$((i+1))
@@ -510,22 +510,58 @@ Error Budget은 서비스 운영 시 우선 순위를 결정하기 위한 기준
   ```bash
   docker compose -f --timestamps api
   ```
+
   ![api500logs](/images/rep4-2422-api500logs.png)
+
 - Error Rate (5xx) SLI가 정의된 임계치를 초과
+
+    ```bash
+    docker compose exec -T prometheus sh -lc '
+    for i in $(seq 1 120); do
+    ts=$(date -Iseconds)
+    echo "===== $ts ====="
+    wget -qO- "http://localhost:9090/api/v1/alerts" \
+      | tr "," "\n" \
+      | sed -n -e "/\"alertname\":\"HighErrorRate\"/p" -e "/\"state\":\"/p" -e "/\"activeAt\"/p"
+    echo
+    sleep 5
+    done
+    '
+    ```
+
+  ![exceedingthreshold](/images/rep4-2422-exceedingthreshold.png)
+
+    본 증적에 사용된 모든 타임스탬프는 Prometheus의 설계에 따라 UTC 기준으로 표시되었다.
+
+    Prometherus는 5분 슬라이딩 윈도우를 기준으로 Error Rate(5xx) SLI를 지속적으로 평가하였다. 계산된 오류 비윺이 정의된 임계치(0.05를 초과한 상태가 2분 이상 유지되면서 highErrorRate Alert는 Pending상태에서 firing 상태로 전환되었으며, 이는 Prometheus Alerts API를 통해 확인되었다.
+
 - Prometheus Alert Rule 평가 결과에 따라 Alert 상태 전이 발생
 
+  ![higherrorratealert](/images/rep4-2422-higherrorrategalert.png)
 Alert의 상태는 다음 순서로 전이 되었다.
 
-> Inactive -> Pending -> Firing
+  > Inactive -> Pending -> Firing
+
+HighErrorRate Alert는 Prometheus Alerts API를 통해 평가되었다.
+캡처된 출력에서 확인할 수 있듯이, Error Rate(5xx)가 정의된 임계치(5%)를 초과한 이후
+해당 상태가 설정된 기간(for: 2m) 동안 지속되면서 Alert가 Firing 상태로 전환되었다.
+또한 activeAt 타임스탬프를 통해, 조건이 Alert를 트리거하기에 충분한 시간 동안
+유지되었음을 확인할 수 있다.
+
+  ![ ]
 
 이는 일시적인 오류가 아닌, 지속적인 SLI 위한 상황임을 확인하기 위한 'for'조건이 정상적으로 적용되었음을 의미한다.
 
 ##### 2.4.3.3 **감지 시간**
 
-- 장애 발생 시점 기준 약 N분후 Alert가 Firing 상태로 전이
-- 감지 지연은 Alert Rule에 정의된 'for' 조건에 따른 정상적인 동작으로 판단 됨
+- 장애 발생 시점 기준 약 N분후 Alert가 Firing 상태로 전이.
+  ![statetransition](/images/rep4-2433-statetransition.png)
+  
+- 감지 지연은 Alert Rule에 정의된 'for' 조건에 따른 정상적인 동작으로 판단 된다. HigherrorRate Alert는 Error Rate(5xx)가 임계치를 초과한 시점부터 즉시 Firing되지 않고, 우선 Pending tkdxofh dbwlehlau, goekd whrjsdl tjfwjdehls tlrks('for: 2m')동안 지속되는지 평가한 이후 Firing 상태로 전환된다.
+  ![normaloperation](/images/rep4-2433-normaloperation.png)
+  위 Alert rule 정의에서 확인할 수 있듯이, HighErrorRate Alert에는 'for: 2m' 조건이 명시되어 있으며, 이는 임계치 초과 상태가 일정 시간 이상 지속되는 경우에만 Alert를 firing하도록 설계된 조건이다.
 
-본 감지 시간은 **즉각적인 반응성과 Alert noise 최소화 간의 trade-off**를 고려한 설계 결과이다.
+본 감지 시간은 **즉각적인 반응성과 Alert noise 최소화 간의 trade-off**를 고려한 설계 결과이다. 일시적인 오류로 인한 불필요한 Alert 발생을 방지하고, Availabiliy SLO를 안정적으로 보호하기 위한 목적에서 Error Rate SLI를 기준으로 Alert가 설계되었다.
 
 > 본 Alert는 단순히 특정 임계값을 초과했기 떄문에 발생한 것이 아니, Availability SLO를 보호하기 위해 Error Rate SLI를 기준으로 설계된 Alert이다.
 
@@ -533,25 +569,44 @@ Alert의 상태는 다음 순서로 전이 되었다.
 
 ##### 2.4.4.1 **사용자 영향**
 
-장애 발생 기간 동안 API 서버에서 HTTP 5xx 오류가 지속적으로 발생함에 딸, 일부 클라이언트 요청이 정상적으로 처리 되지 못하였다.
+이번 장애로 인해 일부 API 요청이 HTTP 500 응답으로 실패아였으며, 이에 따라 정산적인 응답을 기대하는 클라이언트 요청 처리가 불가능한 상태가 발생하였다. 사용자 관점에서는 요청실패가 즉시 인지 가능한 수준의 영향으로 나타났다.
 
 - 일부 API 요청이 HTTP 500 응답으로 실패
-- 정상 응답을 기대하는 클라이언트 요청 처리 불가
-- 사용자 관점에서 요청 실패가 명확하게 인지되는 상태
+  ![api500internalservererror](/images/rep4-2441-api500internalservererror.png)
+  API 서버 로그에서 다수의 요청이 HTTP 500응답으로 실패한 것을 확인하였다. 이는 서버가 정상적인 요청을 처리하지 못한 상태였음을 의미한다.
 
-본 장애는 서버 측 오류로 인해 발생하였으며, 클라이언트 재시도 여부와 관계없이 서비스 신뢰성 저하로 인식될 수 있는 장애로 분류된다.
+- 정상 응답을 기대하는 클라이언트 요청 처리 불가
+  - 클라이언트 관점에서 API 요청을 수행한 결과, HTTP 응답이 반환되어 요청 처리가 실패하였다. 이는 호출 주체가 명시적으로 오류를 인지할 수 있는 형태의 실패이다.
+
+- 사용자 관점에서 요청 실패가 명확하게 인지되는 상태
+  ![internalserver500error](/images/rep4-2441-internalserver500error.png)
+  HTTP 500응답은 클라이언트에게 명시적으로 오류 상태를 전달하는 응답으로, 사용자또는 호촐 주체가 요청 실패를 즉시 인지할 수 있는 상태이다. 본 장애는 사용자 관점에서도 요청 실패가 명확히 들러나는 형태로 영향을 미쳤다.
+
+> 장애 발생 전후 특정 시간 범위의 API 서버 로그를 확인한 결과, 해당 구간에서 다수의 HTTP 500 응답이 발생한 것을 확인하였다. 이는 서버가 정상적인 요청을 처리하지 못한 상태였음을 의미한다.
+본 장애는 서버 측 오류로 인해 발생하였으며,클라이언트 재시도 여부와 관계없이 사용자 또는 외부 시스템 입장에서는 서비스 신뢰성 저하로 인식될 수 있는 장애로 분류된다.
 
 ##### 2.4.4.2 **SLO 영향**
 
 본 장애는 사전에 정의한 SLO 중 Availability SLO 및 Error Rate SLI에 영향을 미쳤다.
+(참고: [2.3 SLI/SLO 설계](#23-slislo-설계))
+
+![grafana](/images/rep4-2443-grafanaerrorrate.png)
 
 - **Availability SLO**
-  - 장애 지속 시간 동안 성공 요청 비율이 감소하여 SLO 위반 또는 위반에 근접한 상태로 평가된 (실제 측정 결과에 따라 위반 여부를 명시한다)
+
+  - 장애 지속 시간 동안 성공 요청 비율이 감소하여 SLO 위반 또는 위반에 근접한 상태로 평가된
 
 - **Error Budget 소모 발생**
-  - HTTP 5xx 응답 증가로 인해 Error Budget이 일부 소모됨
+  - Error Rate(5xx)가 0.6이상으로 상승한 구간이 관측되었으며, Avaiability. 정의(1 - error Rate)에 따라 성공 성공 요청 비율은 40% 이하로 급격히 감소한 상태로 해벅할 수 있다.
+  
+  앞서 정의한 Availability SLO는 Success Rate를 기준으로 하며
+  (참고: [2.3.4 SLO definitions](#234-slo-definitions),
+  [2.3.5 SLO Summary Table](#235-slo-summary-table-revised)),
+  Availability는 Error Rate의 보완 지표(1 − Error Rate)로 해석된다.
 
-본 영향 분석은 단일 장애 이벤트 자체 보다는, SLO평가 기간(Rolling window) 내에서의 누적 영향을 기준으로 판단하였다.
+본 장애는 시전에 정의한 Availability 및 Error Rate SLI에 영향을 미쳤다. 장애 구간 동안 HTTP 5xx dㅡㅇ답이 지속적으로 발생함에 따라, 성공 요청 비율이 감소하여 Availability SLO 위반 또는 위반에 근접한 상태로 평가될 수 있다.
+
+또한 Error Rate 증가로 인해 Error Budget이 일부 소모되었으며, 이는 단일 장애 이벤트 자체보다는 SLO 평가 기간(Rolling window) 내에서의 누적 신뢰성 지표 관점에서 판단 되었다.
 
 > 본 장애는 사용자 경험에 직접적인 영향을 주는 **신뢰성 관점의 장애**로 분류 된다.
 ---
