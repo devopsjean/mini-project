@@ -427,9 +427,9 @@ Error Budget은 서비스 운영 시 우선 순위를 결정하기 위한 기준
 
 ##### 2.4.2.1 **장애 유도 방식**
 
-장애는 API 서비의 /error 엔드포인트를 활용하여 의도적으로 HTTP 500 응답을 일정 시간동안 반복 요청을 발생시켜 의도적으로 오류 트래픽을 유지.
+장애는 API 서비의 `/error` 엔드포인트를 활용하여 의도적으로 HTTP 500 응답을 일정 시간동안 반복 요청을 발생시켜 의도적으로 오류 트래픽을 유지.
 
-- /error 엔드포인트 호출시 항상 HTTP 500 반환
+- `/error` 엔드포인트 호출시 항상 HTTP 500 반환
 
     ```bash
     curl -i http://localhost:8080/error
@@ -629,7 +629,7 @@ Alert 발생 이후, 우선적으로 **서비스 상태 및 장애 범위 확인
 
 - 장애유도 로직 확인
 - 의도적 장애 주입 중단
-  - /error 엔드포인트 호출 중단
+  - `/error` 엔드포인트 호출 중단
   - 또는 API서비스 재시작을 통한 정상 상태 복구
 
 조치는 서비스의 정상 동작을 회복시키는 데 필요한 최소한의 범위로 제한하였다.
@@ -698,11 +698,89 @@ Alert 발생 이후, 우선적으로 **서비스 상태 및 장애 범위 확인
 
 ### 2.5. RCA (Root Cause Analysis)
 
-- 장애 요약
-- 영향 범위
-- 타임라인 (발생 -> 감지 -> 대응 복구)
-- Root Cause
-- 재발 방지 대책
+#### 2.5.1 장애 요약
+
+본 Incident는 API 서비스에서 HTTP 5xx 오류가 지속적으로 발생한 상황을 의도적으로 재현한 실험이다.장애는 FastAPI 서비스의 `/error` 엔드포인트를 반복 호출함으로써 서버 측 오류 트래픽을 유지하는 방식으로 유도되었으며, 그 결과 Error Rate (5xx) SLI가 급격히 상승하였다.
+
+이로 인해 사전에 정의한 Availability SLO 및 Error Rate SLI 기준을 사전에 정의한 Availability SLO 및 Error Rate SLI 기준을 기준으로, 본 장애 구간은 SLO 위반 또는 Error Budget 소모가 발생한 상태로 평가되었다.
+
+본 Incident의 목적은 장애 자체가 아니라, SLI/SLO 기반 Alert → Response → Recovery 흐름이 실제 운영 환경과 유사하게 동작하는지 검증하는 데 있다.
+
+---
+
+#### 2.5.2 영향 범위
+
+- **사용자 영향**
+  - 일부 API 요청이 HTTP 500 응답으로 실패
+  - 정상 응답을 기대하는 클라이언트 요청이 처리되지 않음
+  - HTTP 500 응답 특성상, 클라이언트 또는 사용자 관점에서 요청 실패가 즉시 인지 가능한 장애로 인식됨
+
+  본 장애는 클라이언트 네트워크 문제나 사용자 입력 오류가 아닌, **서버 측 처리 실패(Server-side failure)**로 분류된다.
+
+- **SLO 영향**
+  - Availability SLO
+    - Success Rate 감소로 인해 SLO 위반 또는 위반에 근접한 상태로 평가됨
+
+  - Error Rate SLI
+    - HTTP 5xx 비율이 임계치(5%)를 초과하는 상태가 일정 시간 지속됨
+
+  - Error Budget
+    - Rolling 30일 기준 Availability SLO의 Error Budget 일부 소모
+
+- **비영향 범위**
+  - 데이터 손실 없음
+  - 인프라 리소스 고갈 없음
+  - 비정상 프로세스 종료 없음
+
+  본 Incident는 단일 이벤트 자체보다는, SLO 평가 기간 내에서 신뢰성 지표가 어떻게 악화되는지를 보여주는 사례로 해석된다.
+
+#### 2.5.3 타임라인 (Timeline)
+
+| 단계 | 내용 |
+| ------ | ------ |
+| 장애 발생 | `/error` 엔드포인트 반복 호출을 통해 HTTP 500 응답 지속 발생 |
+| 지표 변화 | Error Rate (5xx) SLI 상승, Success Rate 감소 |
+| 감지 | Prometheus가 Error Rate SLI를 5분 슬라이딩 윈도우 기준으로 평가 |
+| Pending | 임계치 초과 상태가 지속되며 Alert가 Pending 상태로 전이 |
+| Firing | `for: 2m` 조건 충족 후 HighErrorRate Alert가 Firing 상태로 전이 |
+| 대응 | Grafana 대시보드 및 로그를 통해 장애 범위 확인 |
+| 조치 | 장애 유도 중단 (`/error` 호출 중지 또는 API 재시작) |
+| 복구 | Error Rate 정상화, Alert 상태가 Resolved로 전이 |
+
+Alert 감지까지의 지연은 Alert Rule에 정의된 'for' 조건에 따른 정상적인 동작이며,
+이는 Alert noise를 줄이기 위한 의도된 설계로 판단된다. 이는 일시적인 오류로 인한 불필요한 Alert를 방지하고, Availability SLO를 안정적으로 보호하기 위한 의도된 설계로 판단된다.
+
+#### 2.5.4 Root Cause
+
+- **직접 원인 (Direct Cause)**
+  - API 서비스의 `/error` 엔드포인트가 항상 HTTP 500 응답을 반환하도록 설계된 로직
+  - 해당 엔드포인트에 대한 반복 호출로 인해 서버 오류 트래픽이 지속적으로 발생
+
+- **근본 원인 (Root Cause)**
+  - 의도적으로 주입된 서버 오류 로직이 활성화된 상태에서,
+  - Error Rate SLI를 기준으로 한 Alert 조건을 충족할 만큼의 오류 트래픽이 유지됨
+
+  이는 코드 결함이나 인프라 장애가 아닌,
+  신뢰성 검증을 목적으로 한 Controlled Failure Injection의 결과이다.
+
+#### 2.5.5 재발 방지 대책
+
+- **단기 개선**
+  - 장애 유도용 엔드포인트(`/error`)는 실험 환경에서만 활성화
+  - 실험 종료 후 즉시 비활성화 또는 접근 제한
+  - Runbook에 “의도적 장애 주입 여부 확인” 단계 명시
+
+- **중·장기 개선**
+  - **SLO** 기반 **Alert** 도입
+    - 단일 Error Rate 임계치 Alert 대신,
+    - Error Budget 소모 속도를 기준으로 한 Alert 설계
+
+  - **Multi-window / Multi-burn-rate Alert**
+    - 단기 스파이크와 지속적 장애를 구분하여 Alert noise 감소
+  - **Latency 기반 장애 시나리오 추가**
+    - p95 latency 상승이 사용자 경험에 미치는 영향 검증
+  - **Incident 대응 절차의 Runbook화**
+    - 감지 → 판단 → 대응 → 복구 단계를 명문화하여 재현성 확보
 
 ## Project Context (for AI assistants)
 
