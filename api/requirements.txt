@@ -1,3 +1,10 @@
+# Web framework for API endpoints used in SRE experiments
 fastapi==0.109.2
+
+# ASGI server to run FastAPI in a containerized environment
+# 'standard' extras include uvloop and httptools for predictable performance
 uvicorn[standard]==0.27.1
+
+# Prometheus client library for exporting application-level metrics
+# Used to define Error Rate and Latency SLIs
 prometheus-client==0.20.0

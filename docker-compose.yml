@@ -1,96 +1,192 @@
-version: '3.9'
+# Project Overview
+# - Goal: Local SRE mini-project stack for service reliability experiments:
+#         Observability(Metrics) -> Alerting -> Incident simulation -> RCA.
+# - Components:
+#     api          : FastAPI service exposing /health, /metrics (+ /slow, /error for failure injection)
+#     prometheus   : metrics scraping + alert rule evaluation
+#     alertmanager : alert routing/grouping/dedup + delivery (local webhook)
+#     grafana      : visualization dashboards (Prometheus data source)
+#     webhook      : local receiver to validate alert delivery without external dependencies
+#     loadgen      : traffic/failure generator (curl image)
+#
+# Design notes (SRE intent)
+# - "Reproducibility-first": everything runs via docker-compose, no SaaS dependency for alert delivery.
+# - "Separation of concerns": Prometheus evaluates rules, Alertmanager handles delivery behaviors.
+# - "Fast feedback": keep the demo loop tight (easy start/stop, evidence collection via logs/UI).
+version: "3.9"
 
+# Common env: keep time-related evidence consistent with your local timezone (Asia/Seoul).
+# (Prometheus/Alertmanager UIs may still show timestamps in UTC depending on component behavior.)
 x-common-env: &common-env
   TZ: Asia/Seoul
 
 services:
   api:
+    # Service under test (SUT)
+    # - Exposes endpoints for SRE exercises: normal(/health), metrics(/metrics),
+    #   latency injection(/slow), error injection(/error).
     build:
       context: ./api
     container_name: api
+
+    # Why host port mapping?
+    # - Allows you to verify behavior/evidence via host curl:
+    #   http://localhost:8080/health, /metrics, /error, /slow
     ports:
       - "8080:8080"
+
     environment:
       <<: *common-env
+
+    # Single shared network keeps service discovery simple:
+    # - Prometheus scrapes http://api:8080/metrics inside the network
     networks:
       - monitoring
 
   prometheus:
+    # Prometheus: scraping + TSDB + rule evaluation
     image: prom/prometheus:v2.49.1
     container_name: prometheus
+
+    # Command flags rationale:
+    # - --config.file: explicit config path for reproducibility
+    # - --storage.tsdb.path: persist data on a named volume (demo continuity)
+    # - --web.enable-lifecycle: allows safe config reload via HTTP endpoint (optional workflow)
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
       - "--storage.tsdb.path=/prometheus"
       - "--web.enable-lifecycle"
+
+    # Host access:
+    # - http://localhost:9090 for UI/queries and alert inspection
     ports:
       - "9090:9090"
+
     environment:
       <<: *common-env
+
     volumes:
+      # Read-only bind mounts for config immutability:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ./prometheus/alert-rules.yml:/etc/prometheus/alert-rules.yml:ro
+
+      # Persist TSDB so you can keep dashboards/queries consistent across restarts:
       - prometheus_data:/prometheus
+
     networks:
       - monitoring
+
+    # Dependency order intent:
+    # - api: scrape target should exist
+    # - alertmanager: Prometheus can immediately send alerts when rules fire
     depends_on:
       - api
       - alertmanager
 
   grafana:
+    # Grafana: visualization layer (dashboards + Prometheus datasource)
     image: grafana/grafana:10.2.3
     container_name: grafana
+
     environment:
       <<: *common-env
+
+      # Demo-first creds (do NOT do this in real production):
       GF_SECURITY_ADMIN_USER: admin
       GF_SECURITY_ADMIN_PASSWORD: admin
+
+      # Align UI timestamps with local time for easier evidence capture:
       GF_DATE_FORMATS_DEFAULT_TIMEZONE: Asia/Seoul
+
+    # Host access:
+    # - http://localhost:3000
     ports:
       - "3000:3000"
+
     volumes:
+      # Persist Grafana state (users/orgs, etc.)
       - grafana_data:/var/lib/grafana
+
+      # Provisioning as code (reproducibility):
+      # - datasources/dashboards auto-load on startup
       - ./grafana/provisioning:/etc/grafana/provisioning:ro
+
+      # Dashboards are treated as read-only "artifacts" for review/evidence:
       - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+
+    # Grafana depends on Prometheus availability for data source checks/queries.
     depends_on:
       - prometheus
+
     networks:
       - monitoring
 
   alertmanager:
+    # Alertmanager: routing/grouping/dedup + delivery
     image: prom/alertmanager:v0.27.0
     container_name: alertmanager
+
     volumes:
+      # Config as code (reproducibility):
       - ./alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+
     command:
       - "--config.file=/etc/alertmanager/alertmanager.yml"
+
+      # Debug logging is useful for evidence:
+      # - route/grouping/receiver selection can be proven from logs
       - "--log.level=debug"
+
+    # Host access:
+    # - http://localhost:9093
     ports:
       - "9093:9093"
+
     environment:
       <<: *common-env
+
     networks:
       - monitoring
+
+    # Delivery validation requires webhook receiver to be up.
     depends_on:
       - webhook
 
   webhook:
+    # Local webhook receiver
+    # - Purpose: validate alert delivery end-to-end WITHOUT Slack/Email dependency.
     build: ./webhook
     container_name: webhook
-    # 포트는 필수가 아님. 충돌 피하려면 아래 ports는 주석 처리해도 됨.
+
+    # Optional host mapping:
+    # - Not strictly required unless you want to curl/test from host
+    # - If port conflicts happen, you can comment this out
     ports:
       - "9001:9001"
+
     environment:
       <<: *common-env
+      # Helps ensure logs flush immediately (good for evidence collection)
       PYTHONUNBUFFERED: 1
+
     networks:
       - monitoring
+
   loadgen:
+    # Load generator (minimal curl image)
+    # - Used to generate traffic patterns for SLI/alert validation
+    # - Example: `docker compose run --rm loadgen ...`
     image: curlimages/curl:8.5.0
     networks:
       - monitoring
 
 networks:
   monitoring:
+    # Single network keeps service discovery names stable: api, prometheus, alertmanager, webhook, grafana
+    # (In a larger project, you might split "app" vs "monitoring" networks.)
+    {}
 
 volumes:
-  prometheus_data:
-  grafana_data:
+  # Persist Prometheus TSDB and Grafana state to keep evidence reproducible across restarts.
+  prometheus_data: {}
+  grafana_data: {}
