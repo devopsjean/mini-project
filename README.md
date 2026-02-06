@@ -1,6 +1,6 @@
 # SRE mini Project
 
-본 프로젝트는 SRE 관점에서
+본 프로젝트는 **SRE 관점에서**
 
 - **서비스 신뢰성 측정**
 - **관측 가능성(Observability) 구축**
@@ -11,6 +11,8 @@
 
 ## Total Structure
 
+The following diagram shows the end-to-end data flow from API exposure to metrics scraping and visualization.
+
 ![structure](images/structure.png)
 
 ---
@@ -19,20 +21,22 @@
 
 ### 1.1 Prerequisites
 
-- Docker
-- Docker Compose (v2)
+- `Docker`
+- `Docker Compose (v2)`
 
 ### 1.2 Run the stack
 
+Run the following commands to start the full observability stack:
+
 ```bash
 git clone https://github.com/devopsjean/mini-project.git
-cd <repo>
+cd mini-project
 docker compose up -d
 ```
 
 ### 1.3 Verify Running Services
 
-After starting the statck, verify the all services are running:
+After starting the statck, **verify the all services are running**:
 
 ```bash
 docker compose ps
@@ -63,18 +67,18 @@ is accessible via the following URLs:
 All endpoints should be reachable before proceeding to observability
 and alert validation steps.
 
-## 2.요구사항
+## 2. 요구사항
 
 ### 2.1. 서비스(API) - Verification
 
 ---
 
-본 API는 신뢰성 테스트 목적의 서비스로, 정상 응답/의도적 지연/의도적 5xx 오류를 재현할 수 있다.
+본 API는 신뢰성 테스트 목적의 서비스로, 정상 응답 / 의도적 지연 / 의도적 '5xx' 오류를 재현할 수 있다.
 
 #### 2.1.1 정상 응답
 
 - Endpoint: `/health`
-- Expected: HTTP 200 + JSON body
+- Expected: HTTP `200` + JSON body
 
 ```bash
 curl -i http://localhost:8080/health
@@ -85,7 +89,7 @@ curl -i http://localhost:8080/health
 #### 2.1.2 의도적인 응답 지연
 
 - Endpoint: `/slow?ms=1000`
-- Expected: HTTP 200, total time ≈ 1s 이상
+- Expected: HTTP `200`, total time ≈ `1s` 이상
 
 ```bash
 curl -s -w '\nstatus=%{http_code} total=%{time_total}s\n' 'http://localhost:8080/slow?ms=1000' -o /dev/null
@@ -96,7 +100,7 @@ curl -s -w '\nstatus=%{http_code} total=%{time_total}s\n' 'http://localhost:8080
 #### 2.1.3 의도적인 오류
 
 - Endpoint: `/error`
-- Expected: HTTP 500 (intentional)
+- Expected: HTTP `500` (intentional)
 
 ```bash
 curl -i http://localhost:8080/error
@@ -108,51 +112,51 @@ curl -i http://localhost:8080/error
 
 ---
 
-본 프로젝트는 Metrics 기반 관측 가능성(Observability)을 목표로 하며, 아래 구성으로 수집/시각화/알림을 구현합니다.
+본 프로젝트는 Metrics 기반 관측 가능성(Observability)을 목표로 하며, 아래 구성으로 `수집 / 시각화 / 알림`을 구현합니다.
 
 #### 2.2.1 Metrics: Prometheus
 
-API는 `/metrics`에서 Prometheus 형식의 메트릭을 노출하며, Prometheus는 해당 엔드포인트를 scrape하여 시계열 데이터로 저장한다.
-본 프로젝트에서는 API의 요청 수/지연시간/오류 응답 같은 신뢰성 지표(SLI 후보)를 수집하기 위해 Prometheus를 사용합니다.
+API는 `/metrics`에서 Prometheus 형식의 메트릭을 노출하며, Prometheus는 해당 엔드포인트를 `scrape`하여 시계열 데이터로 저장한다.
+본 프로젝트에서는 API의 `요청 수 / 지연시간 / 오류` 응답 같은 신뢰성 지표(SLI 후보)를 수집하기 위해 Prometheus를 사용합니다.
 
-#### **2.2.1.1 API and prometheus metrics structure**
+#### 2.2.1.1 API and Prometheus metrics structure
 
 ![apiprometheusmetricstructure](/images/rep2-prometheus-metrics-structure.png)
 
-Prometheus는 기본 `scrape_interval`(15s)에 따라 API의 `/metrics` 엔드포인트를 주기적으로 수집한다.
-`scrape_interval=15s`는 데모 환경에서 메트릭 반응성을 확보하면서 과도한 scrape 부하를 피하기 위한 기본값으로 설정하였다.
+Prometheus는 기본 `scrape_interval`(`15s`)에 따라 API의 `/metrics` 엔드포인트를 주기적으로 수집한다.
+`scrape_interval=15s`는 데모 환경에서 메트릭 반응성을 확보하면서 과도한 `scrape` 부하를 피하기 위한 기본값으로 설정하였다.
 
-#### **2.2.1.2 API 노출(expose)**
+#### 2.2.1.2 API 노출 (expose)
 
 ![api-metrics](images/rep2-api-metrics.png)
 
-사용자가 확인하는 URL은 `http://localhost:8080/metrics` 이며, Prometheus는 docker network 내부에서 `http://api:8080/metrics` 를 scrape 대상으로 사용한다.
+사용자가 확인하는 URL은 `http://localhost:8080/metrics` 이며, Prometheus는 **Docker network 내부**에서 `http://api:8080/metrics` 를 `scrape` 대상으로 사용한다.
 
-#### **2.2.1.3 prometheus 수집(scrape)**
+#### 2.2.1.3 prometheus 수집(scrape)
 
 ![prometheus](images/rep2-prometheus-metrics.png)
 
-사용자가 확인하는 URL은 `http://localhost:9090/metrics` 이며, Prometheus는 docker network 내부에서 `http://prometheus:9090/metrics` 를 scrape 하는 주체로 사용한다.
+사용자가 확인하는 URL은 `http://localhost:9090/metrics` 이며, Prometheus는 **Docker network 내부**에서 `http://prometheus:9090/metrics`를 'scrape'하는 주체로 동작한다.
 
-#### **2.2.1.4 query at prometheus graph**
+#### 2.2.1.4 query at prometheus graph
 
 ![query](images/rep2-query.png)
 
 - `http_requests_total: Counter` (누적 요청 수)
 - `http_request_duration_seconds: Histogram` (지연시간 분포)
 
-Counter는 누적 값으로 트래픽 추이를 확인하는 데 사용되며,Histogram은 p95/p99 지연시간과 같은 SLO 계산의 기반이 된다.
+Counter는 **누적 값**으로 트래픽 추이를 확인하는 데 사용되며, Histogram은 **p95/p99 지연시간**과 같은 SLO 계산의 기반이 된다.
 해당 메트릭들은 이후 SLI/SLO 정의(가용성, 지연시간) 및 Alert Rule의 기반으로 사용된다.
 
 #### 2.2.2 Visualization: Grafana
 
-![visualization](images/rep2-visualizationgranafa.png)
+![visualization](images/rep2-visualizationgrafana.png)
 
 Grafana는 UI에서 수동으로 Data source / Dashboard를 생성하지 않고, Provisioning(코드 기반 설정) 으로 자동 구성되도록 설계하였다. 목표는 `docker compose up -d` 한 번으로 동일한 관측(Visualization) 환경이 재현되게 하는 것이다.
 
 이는 환경 차이로 인한 관측 편차를 제거하고, 실험 및 장애 재현시 동일한 기준선(baseline)을 유지하기 위함이다.
 
-#### **2.2.2.1 Data source provisioning**
+#### 2.2.2.1 Data source provisioning
 
 - Prometheus data source를 UID기준(uid: prometheus) 으로 고정하여, 대시보드가 안정적으로 참조할 수 있게 구성하였다.
 - Prometheus URL은 docker netwrok 내부 서비스명 기반으로 설정한다: `http://prometheus:9090`
@@ -171,7 +175,7 @@ See the full configuration here:
   
 - [grafana/provisioning/datasources/prometheus.yml](grafana/provisioning/datasources/prometheus.yml)
 
-#### **2.2.2.2 Dashboard provisioning**
+#### 2.2.2.2 Dashboard provisioning
 
 - Grafana 기동 시 `grafana/dashboards/` 디렉터리의 JSON 대시보드(예: `sre-dashboard.json`)를 자동 로딩한다.
 
@@ -195,7 +199,7 @@ See the full configuration here:
 
 - [grafana/provisioning/datasources/dashboard.yml](grafana/provisioning/datasources/dashboard.yml)
 
-#### **2.2.2.3 Dashboard panel configuration**
+#### 2.2.2.3 Dashboard panel configuration
 
 - 기본 대시보드에는 다음 3개의 패널을 포함한다.
 
@@ -273,11 +277,11 @@ See the full configuration here:
 
 4. **결과 요약**
 
-    ![granafadashboard](/images/rep2-granafadashboard.png)
+    ![grafanadashboard](/images/rep2-grafanadashboard.png)
 
     위 구성을 통해 API 서비스에 대한 트래픽, 오류, 지연시간을 Grafana 대시보드에서 통합적으로 관측할 수 있음을 확인. 이는 Prometheus 기반 메트릭 수집과 Grafana 시각화가 정상적으로 연동되었음을 의미하며, 서비스 상태를 실시간으로 파악할 수 있는 기본적인 Observability 환경을 구축하였다.
 
-    이 시각화 구성을 기반으로, 다음 단계에서는 Prometheus Alert Rule과 Alertmanagerf를 통해 이상 상태를 자동으로 감지하고 대응하는 Alerting 흐름을 구성한다.
+    이 시각화 구성을 기반으로, 다음 단계에서는 Prometheus Alert Rule과 Alertmanager를 통해 이상 상태를 자동으로 감지하고 대응하는 Alerting 흐름을 구성한다.
 
     See the full configuration here:
 
@@ -294,14 +298,14 @@ See the full configuration here:
 
 Prometheus는 Alert Rule을 평가하여 Alert 이벤트를 생성하지만, 실제 알림 전송(Mail, Slack 등), 그룹화, 중복제거는 Alertmanager가 담당한다.
 
-#### **2.2.3.1 Alerting Architecture**
+#### 2.2.3.1 Alerting Architecture
 
 ![alteringarchitecture](/images/rep2-alertingarchitecture.png)
 
 본 프로젝트에서는 서비스 신뢰성 위반을 감지하기 위해 Prometheus Alert Rule을 사용한다.
 Alert는 SLI 후보 지표인 Availability, Error Rate, Latency를 기반으로 정의된다.
 
-#### **2.2.3.2 Alert Validation Summary**
+#### 2.2.3.2 Alert Validation Summary
 
 - Prometheus가 `alert-rules.yml`에 정의된 규칙을 정상적으로 평가함을 확인.
 - Alert는 Inactive -> Firing -> Resolved 상태 전이를 의도한 대로 수행하였다.
@@ -341,12 +345,12 @@ Alert는 SLI 후보 지표인 Availability, Error Rate, Latency를 기반으로 
 
     Alert rule, Alertmanager 설정, webhook receiver는 docker-compose 기반으로 정의 되어 있으며, 동일한 환경을 구성할 경우 누구나 동일한 Alert 검증 과정을 재현할 수 있다.
 
-#### ##2.2.3.3 Validation Evidence##
+#### 2.2.3.3 Validation Evidence
 
 Alert validation 과정에서 다음과 같은 증적을 확보하였다.
 
-- **Alert State Trasition**
-    Prometheus Alerts UI를 통해 APIDown Alert가 Iantive -> Pending -> Firing 상태로 전이 되는 것을 확인 하였다.
+- **Alert State Transition**
+    Prometheus Alerts UI를 통해 APIDown Alert가 Inactive -> Pending -> Firing 상태로 전이 되는 것을 확인 하였다.
 
 - **Alert Delivery**
     Alertmanager 로그를 통해 APIDown Alert가 정상적으로 수신되었으며, 설정된 route 및 group-by 정책에 따라 local-webhook receiver로 전달됨을 확인.
@@ -368,7 +372,7 @@ Alert validation 과정에서 다음과 같은 증적을 확보하였다.
         };
         ```
 
-#### **2.2.3.4 Observation & Imporovements**
+#### 2.2.3.4 Observation & Improvements
 
 - 'for' 값은 Alert 반응 속도와 noise 간의 trade-off가 존재하며, 운영환경에 따라 추가적인 튜닝이 필요하다.
 - p95 latency 기준값은 초기 가설로 설정되었으며, 실제 트래픽 패턴에 따라 조정이 필요하다.
@@ -378,18 +382,18 @@ Alert validation 과정에서 다음과 같은 증적을 확보하였다.
 
 ---
 
-> 이 섹션에서는 서비스의 신뢰성을 측정하기 위한 SLI와 정량적 목표인 SLO를 정의한다.
+> 이 섹션에서는 서비스의 신뢰성을 측정하기 위한 **SLI**와 정량적 목표인 **SLO**를 정의한다.
 
 ![slilodesign](/images/rep3-slislodesign.png)
-Figure: Relationship between metrics, SLI/SLO, error budget, and operational decision-making
+*Figure: Relationship between metrics, SLI/SLO, error budget, and operational decision-making*
 
 #### 2.3.1 Service Scope & Definition
 
-- **Service name**: 'fastapi-app'
+- **Service name**: `fastapi-app`
 - **Service type**: HTTP API service
 - **Users**: internal consumers / demo users
 - **Critical User Journeys**
-  - (UJ-1) 'GET /health'returns '200 OK'
+  - (UJ-1) 'GET /health'returns `200 OK`
   - (UJ-2) Core API endpoints return successful responses within acceptable latency
 
 Out of scope:
@@ -414,34 +418,36 @@ Based on these criteria, the following SLI are selected:
 
 #### 2.3.3 SLI Definitions
 
-> 아래는 서비스 신뢰성을 측정하기 위해 선택한 세가지 SLI와 그 정의를 설명한다.
+> 아래는 서비스 신뢰성을 측정하기 위해 선택한 **세가지 SLI**와 그 정의를 설명한다.
 
-#### **SLI-A: Success Rate (Availability)**
+#### SLI-A: Success Rate (Availability)
 
 **Definition**
 Ratio of successful HTTP requests to total evaluated requests.
 
-- **Good events**: HTTP status codes '2xx', '3xx'
-- **Bad events**: HTTP status codes '5xx'
-- **Excluded** '4xx' responses (treated as client-side errors by policy)
+- **Good events**: HTTP status codes `2xx`, `3xx`
+- **Bad events**: HTTP status codes `5xx`
+- **Excluded** `4xx` responses (treated as client-side errors by policy)
 
 **Formula**
-    ```java
-    Success Rate = Good Requests/ (Good Requests + Bad Requets)
-    ```
+
+```java
+Success Rate = Good Requests / (Good Requests + Bad Requets)`
+```
 
 **PromQL**
-    ```promql
-    (
-      sum(rate(http_requests_total{Pjob"fastapi", status=~"2..|3.."}[5m]]))
-    )
-    /
-    (
-      sum(rate(http_requests_total{job="fastapi", status=~"2..|3..|5.."}[5m]))
-    )
-    ```
 
-#### **SLI-2: Request Latency(p95)**
+```promql
+(
+  sum(rate(http_requests_total{Pjob"fastapi", status=~"2..|3.."}[5m]))
+)
+/
+(
+  sum(rate(http_requests_total{job="fastapi", status=~"2..|3..|5.."}[5m]))
+)
+```
+
+#### SLI-2: Request Latency(p95)
 
 **Definition**
 95th percentile of HTTP request latency measured using histogram metrics.
@@ -449,43 +455,46 @@ Ratio of successful HTTP requests to total evaluated requests.
     - Calculated across all relevant requests
 
 **PromQL**
-    ```promql
-      histogram_quantile(
-        0.95,
-        sum by (le) (
-          rate(http_request_duration_seconds_bucket(job="fastapi"}[5m]))
-        )
-    )
 
-#### **SLI-3: Error Rate (5xx)**
+```promql
+  histogram_quantile(
+    0.95,
+    sum by (le) (
+      rate(http_request_duration_seconds_bucket(job="fastapi"}[5m]))
+    )
+)
+```
+
+#### SLI-3: Error Rate (5xx)
 
 **Definition**
 Ratio of server-side error responses (HTTP 5xx) over total incoming requests.
-    - provides direct visibility into service failures
+    - Provides direct visibility into service failures
     - Complements availability SLI with explicit falilure tracking
 
 **Formula**
-    ```java
-    Error Rate = 5xx Requests / Total Requests
-    ```
 
-#### 2.3.4 SLO definitions
+```java
+Error Rate = 5xx Requests / Total Requests
+```
 
-#### **SLO-1: Availability**
+#### 2.3.4 SLO Definitions
+
+#### SLO-1: Availability
 
 - **SLI**: Success Rate
 - **Objective** : ≥ 99.9%
 - **Time window**: Rolling 30days
 - **Scope**: All service endpoints
 
-#### **SLO-2: Latency**
+#### SLO-2: Latency
 
 - **SLI**: Request Latency (p95)
 - **Objective**: ≤ 300ms
 - **Time window**: Rolling 30days
 - **Scope**: Critical user-facing endpoints
 
-#### **SLO-3: Error Rate**
+#### SLO-3: Error Rate
 
 - **SLI**: Error Rate (5xx)
 - **Objective**: ≤ 0.1%
@@ -511,9 +520,9 @@ Error Budget은 정의된 **SLO를 기준으로 허용 가능한 실패 범위**
 앞서 정의한 Availability SLO (SLO-1)를 기준으로 하면:
 
 - **Availability SLO (SLO-1)**: ≥ 99.9%
-- **허용 가능한 Error Budget**: 30일 기분 전체 요청 중 최대 0.1%
+- **허용 가능한 Error Budget**: 30일 기준 전체 요청 중 최대 0.1%
 
-즉, SLO 평가 기간 동안 전체 요청 중 최대 0.1%ㄲ지의 HTTP 5xx 오류는 Availability SLO 위반으로 간주되지 않는다.
+즉, SLO 평가 기간 동안 전체 요청 중 최대 0.1%까지의 HTTP 5xx 오류는 Availability SLO 위반으로 간주되지 않는다.
 
 #### **운영 관점에서의 해석**
 
@@ -528,27 +537,27 @@ Error Budget은 서비스 운영 시 우선 순위를 결정하기 위한 기준
 
 ---
 
-이 섹션에서는 서비스 운영 중 발생할 수 있는 장애를 의도적으로 재현하고, 장애 감지부터 복구 및 학습까지의 Incident Response 흐름을 SRE 관점에서 정리한다. 본 목적은 장애 자체가 아니라, 장애를 어떻게 인지하고 관리했는지를 보여주는 데 있다.
+이 섹션에서는 서비스 운영 중 발생할 수 있는 장애를 **의도적으로 재현**하고, 장애 감지부터 복구 및 학습까지의 **Incident Response 흐름**을 **SRE 관점**에서 정리한다. 본 목적은 장애 자체가 아니라, 장애를 어떻게 인지하고 관리했는지를 보여주는 데 있다.
 
 #### 2.4.1 Incident Scenario Overview
 
 #### **2.4.1.1 목적**
 
-본 장애 시나리오의 목적은 실제 운영 환경에서 발생할 수 있는 단일하고 현실적인 장애 상황을 재현하고, 사전에 정의한 SLI/SLO 기반 Alert이 정상적으로 동작하는지를 검증하는 데 있다.
+본 장애 시나리오의 목적은 실제 운영 환경에서 발생할 수 있는 **단일하고 현실적인 장애** 상황을 재현하고, 사전에 정의한 **SLI/SLO 기반 Alert**이 **정상적으로 동작하는지를 검증**하는 데 있다.
 
 구체적으로는 다음을  목표로 한다.
 
 - 실제 운영 환경에서 발생 할 수 있는 현실적인 단일 장애를 선택
-- 기존에 정의한 SLI/SLO와 직접적으로 연결되는 장애 상황 재현
-- 장애 발생 부터 Alert -> Response -> Recovery까지의 Incident Response 흐름 검증.
+- 기존에 정의한 **SLI/SLO**와 직접적으로 연결되는 장애 상황 재현
+- 장애 발생 부터 **Alert → Response → Recovery**까지의 **Incident Response 흐름** 검증.
 
 본 섹션은 장애를 '만드는 것'이 아니라, 장애를 어떻게 인지하고 관리했는지를 보여주는 데 중점을 둔다.
 
 #### **2.4.2.2 선택한 장애 시나리오**
 
-- Scenario:  API서버에서 HTTP 5xx 오류 지속 발생하는 상황
-- 유형: Server-side failure
-- 의도: Availability/ Error Rate SLI 위한 상황 재현
+- **Scenario**:  API서버에서 `HTTP 5xx` 오류 지속 발생하는 상황
+- **유형**: Server-side failure
+- **의도**: `Availability` / `Error Rate` SLI 위한 상황 재현
 
 본 시나리오는 서비스 신뢰성에 직접적인 영향을 주는 대표적인 서버 장애 유형으로, 사용자 관점에서 "요청이 실패한다"는 명확한 증상을 가지며, Availability SLO 및 Error Rate와 명확하게 연결된다.
 
@@ -558,9 +567,9 @@ Error Budget은 서비스 운영 시 우선 순위를 결정하기 위한 기준
 
 #### **2.4.2.1 장애 유도 방식**
 
-장애는 API 서비의 `/error` 엔드포인트를 활용하여 의도적으로 HTTP 500 응답을 일정 시간동안 반복 요청을 발생시켜 의도적으로 오류 트래픽을 유지.
+장애는 API 서비의 `/error` 엔드포인트를 활용하여 의도적으로 `HTTP 500` 응답을 일정 시간동안 반복 요청을 발생시켜 의도적으로 오류 트래픽을 유지.
 
-- `/error` 엔드포인트 호출시 항상 HTTP 500 반환
+- `/error` 엔드포인트 호출시 항상 `HTTP 500` 반환
 
     ```bash
     curl -i http://localhost:8080/error
@@ -569,7 +578,7 @@ Error Budget은 서비스 운영 시 우선 순위를 결정하기 위한 기준
     ![curl500error](/images/rep4-2421-curl500error1.png)
 - 일정 시간 동안 반복적인 요청을 발생 시켜 Error Rate 상승 유도
 
-  - 아래 명령은 일정 시간 동안 오류 요청을 반복 발생시켜 Error Rate SLI가 Alert Rule 조건을 충족하도록 설계했다.
+  - 아래 명령은 일정 시간 동안 오류 요청을 반복 발생시켜 **`Error Rate` SLI**가 **Alert Rule** 조건을 충족하도록 설계했다.
   
     ```bash
     docker compose run --rm loadgen sh -lc '
@@ -606,9 +615,9 @@ Error Budget은 서비스 운영 시 우선 순위를 결정하기 위한 기준
 
 #### **2.4.3.1 감지 수단**
 
-본 장애는 Prometheus Alert Rule(alert-rules.yml)을 통해 감지되었다.
+본 장애는 `Prometheus` Alert Rule(`alert-rules.yml`)을 통해 감지되었다.
 
-- **Alerting system**: Prometheus Alert Rule
+- **Alerting system**: `Prometheus` Alert Rule
 
     ```yaml
     - alert: HighErrorRate
@@ -630,13 +639,13 @@ Error Budget은 서비스 운영 시 우선 순위를 결정하기 위한 기준
 
   ![alertnamehigherrorrate](/images/rep4-2422-alertnamehigherrorrate.png)
 
-해당 Alert는 API 서비스의 Error Rate (HTTP 5xx)를 지속적으로 관측하며, 사전에 정의한 SLI/SLO 기준을 벗어나는 경우 Incident를 감지하도록 설계되었다.
+해당 Alert는 API 서비스의 Error Rate (`HTTP 5xx`)를 지속적으로 관측하며, 사전에 정의한 SLI/SLO 기준을 벗어나는 경우 Incident를 감지하도록 설계되었다.
 
 #### **2.4.3.2 감지 과정**
 
 장애 유도 이후 다음과 같은 감지 과정이 수행되었다.
 
-- API 서버에서 HTTP 5xx 응답이 지속적으로 발생
+- API 서버에서 `HTTP 5xx` 응답이 지속적으로 발생
 
   ```bash
   docker compose -f --timestamps api
@@ -679,14 +688,14 @@ HighErrorRate Alert는 Prometheus Alerts API를 통해 평가되었다.
 또한 activeAt 타임스탬프를 통해, 조건이 Alert를 트리거하기에 충분한 시간 동안
 유지되었음을 확인할 수 있다.
 
-이는 일시적인 오류가 아닌, 지속적인 SLI 위한 상황임을 확인하기 위한 'for'조건이 정상적으로 적용되었음을 의미한다.
+이는 일시적인 오류가 아닌, 지속적인 **`SLI 위한 상황**임을 확인하기 위한 'for'조건이 정상적으로 적용되었음을 의미한다.
 
 #### **2.4.3.3 감지 시간**
 
 - 장애 발생 시점 기준 약 N분후 Alert가 Firing 상태로 전이.
   ![statetransition](/images/rep4-2433-statetransition.png)
   
-- 감지 지연은 Alert Rule에 정의된 'for' 조건에 따른 정상적인 동작으로 판단 된다. HigherrorRate Alert는 Error Rate(5xx)가 임계치를 초과한 시점부터 즉시 Firing되지 않고, 우선 Pending tkdxofh dbwlehlau, goekd whrjsdl tjfwjdehls tlrks('for: 2m')동안 지속되는지 평가한 이후 Firing 상태로 전환된다.
+- 감지 지연은 Alert Rule에 정의된 'for' 조건에 따른 정상적인 동작으로 판단 된다. HigherrorRate Alert는 Error Rate(5xx)가 임계치를 초과한 시점부터 즉시 Firing되지 않고, 우선 Pending 상태로 유지되며, 해당 조건이 설정된 시간('for: 2m')동안 지속되는지 평가한 이후 Firing 상태로 전환된다.
   ![normaloperation](/images/rep4-2433-normaloperation.png)
   위 Alert rule 정의에서 확인할 수 있듯이, HighErrorRate Alert에는 'for: 2m' 조건이 명시되어 있으며, 이는 임계치 초과 상태가 일정 시간 이상 지속되는 경우에만 Alert를 firing하도록 설계된 조건이다.
 
