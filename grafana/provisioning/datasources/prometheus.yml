@@ -8,7 +8,7 @@ apiVersion: 1
 #     orgId: 1
 
 datasources:
-  - name: rometheus
+  - name: prometheus
     # IMPORTANT: Stable UID used by dashboards (sre-dashboard.json datasource.uid must match)
     uid: prometheus
 

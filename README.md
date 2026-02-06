@@ -72,13 +72,13 @@ scrape_interval=15s는 데모 환경에서 메트릭 반응성을 확보하면�
 
 ![api-metrics](images/rep2-api-metrics.png)
 
-사용자가 확인하는 URL은 http://localhost:8080/metrics 이며, Prometheus는 docker network 내부에서 http://api:8080/metrics 를 scrape 대상으로 사용한다.
+사용자가 확인하는 URL은 `http://localhost:8080/metrics` 이며, Prometheus는 docker network 내부에서 `http://api:8080/metrics` 를 scrape 대상으로 사용한다.
 
 ##### 2.2.1.3 prometheus 수집(scrape)
 
 ![prometheus](images/rep2-prometheus-metrics.png)
 
-사용자가 확인하는 URL은 http://localhost:9090/metrics 이며, Prometheus는 docker network 내부에서 http://prometheus:9090/metrics 를 scrape 하는 주체로 사용한다.
+사용자가 확인하는 URL은 `http://localhost:9090/metrics` 이며, Prometheus는 docker network 내부에서 `http://prometheus:9090/metrics` 를 scrape 하는 주체로 사용한다.
 
 ##### 2.2.1.4 query at prometheus graph
 
@@ -94,60 +94,140 @@ Counter는 누적 값으로 트래픽 추이를 확인하는 데 사용되며,Hi
 
 ![visualization](images/rep2-visualizationgranafa.png)
 
-본 구조에서는 API가 /metrics 엔드포인트를 통해 메트릭을 노출하고, Prometheus가 이를 주기적으로 수집하여 TSDB에 저장한다. Grafana는 Prometheus의 Query API에 PromQL 요청을 전달하며, Prometheus는 내부 TSDB에서 시계열 데이터를 조회한 뒤 PromQL 연산을 수행하고, 계산된 결과를 Grafana에 반환한다.
+Grafana는 UI에서 수동으로 Data source / Dashboard를 생성하지 않고, Provisioning(코드 기반 설정) 으로 자동 구성되도록 설계하였다. 목표는 `docker compose up -d` 한 번으로 동일한 관측(Visualization) 환경이 재현되게 하는 것이다.
 
-##### 2.2.2.1 Data Source
+이는 환경 차이로 인한 관측 편차를 제거하고, 실험 및 장애 재현시 동일한 기준선(baseline)을 유지하기 위함이다.
 
-![datasources](images/rep2-datasources.png)
+##### 2.2.2.1 Data source provisioning
 
-Grafana에서 Prometheus를 Data Source로 등록하였다.
-Docker Compose 환경에서 서비스 간 통신을 위해 Prometheus의 내부 주소(http://prometheus:9090)을 사용하였으며, Data Source 연결 테스트를 통해 정상적으로 메트릭을 조회할 수 있음을 확인.
+- Prometheus data source를 UID기준(uid: prometheus) 으로 고정하여, 대시보드가 안정적으로 참조할 수 있게 구성하였다.
+- Prometheus URL은 docker netwrok 내부 서비스명 기반으로 설정한다: `http://prometheus:9090`
 
-##### 2.2.2.2 Dashboard and Panel 구성
+  ```yaml
+  apiVersion: 1
+  datasources:
+  - name: prometheus
+    uid: prometheus
+    url: http://prometheus:9090
+  ```
+
+- Grafana 대시보드는 내부적으로 datasource를 name이 아닌 UID 기준으로 참조하므로, UID를 고정하지 않으면 재기동 또는 환경 재구성 시 참조 오류가 발생할 수 있다.
+
+See the full configuration here:
+
+- [grafana/provisioning/datasources/prometheus.yml](grafana/provisioning/datasources/prometheus.yml)
+
+##### 2.2.2.2 Dashboard provisioning
+
+- Grafana 기동 시 grafana/dashboards/ 디렉터리의 JSON 대시보드(예: sre-dashboard.json)를 자동 로딩한다.
+
+- 로딩된 대시보드는 Grafana UI에서 mini-project 폴더 아래에 나타난다.
+
+    ```yaml
+    apiVersion: 1
+    
+    providers:
+      - name: "mini-project"
+        type: file
+        folder: "mini-project"
+        folderUid: "mini-project"
+        editable: true
+        updateIntervalSeconds: 30
+        options:
+          path: /var/lib/grafana/dashboards
+    ```
+
+See the full configuration here:
+
+- [grafana/provisioning/datasources/dashboard.yml](grafana/provisioning/datasources/dashboard.yml)
+
+##### 2.2.2.3 Dashboard panel configuration
+
+- 기본 대시보드에는 다음 3개의 패널을 포함한다.
 
 1. **Traffic (RPS)**
 
-    ![trafficrps](images/rep2-trafficrps.png)
+    ```json
+     "title": "Traffic (RPS)",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(http_requests_total[1m]))",
+          "refId": "A"
+        }
+      ],
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 16 }
+    ```
 
     Traffic 패널은 API에 유입되는 요청량을 초당 요청수(RPS) 기준으로 시각화 한다.
     요청량의 변화는 서비스 부하 상태를 판단하는 기본 관측 지표로 활용한다.
+
+    Traffic은 Google SRE에서 정의한 Golden Signals 중 하나로, 시스템 부하 변화의 1차 지표로 활용된다.
 
 1. **Error Rate (5xx)**
 
     Error Rate 패널은 전체 요청 대비 HTTP 5xx 응답 비율을 나타낸다.
     서버 오류는 사용자 경험에 직접적인 영향을 미치므로 핵심 관측 지표로 설정하였다.
+    이후 Alerting 단계에서는 이 Error Rate를 기반으로 임계치 초과 시 알림이 발생하도록 설계한다.
 
-    ```query
-    sum(rate(http_requests_total{status=~"5.."}[5m]))
-    /
-    sum(rate(http_requests_total[5m]))
+    ```json
+    "title": "Error Rate (5xx)",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(http_requests_total{status=~\"5..\"}[5m])) / sum(rate(http_requests_total[5m]))",
+          "refId": "A"
+        }
+      ],
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 8 }
     ```
 
     현재 환경에서는 HTTP 5xx 응답이 발생하지 않아 에러율은 0에 수렴하는 값을 보인다. 이는 서비스가 정상 상태임을 의미하며, 장애 발생 시 해당 패널을 통해 즉각적인 이상 탐지가 가능하다.
-
-    ![errorrate](images/rep2-errorrate.png)
 
 1. **Latency (p95)**
 
     평균 지연시간은 일부 느린 요청을 가릴 수 있으므로, 히스토그램 기반 p95 지연시간을 사용하여 상위 지연 요청을 기준으로 서비스 응답성을 관측하였다.
 
-    ```query
-    histogram_quantile(
-    0.95,
-    sum(rate(http_request_duration_seconds_bucket[5m])) by (le)
-    )
+    p95 지연시간은 평균값이 숨길 수 있는 tail latency를 드러내며,사용자 체감 성능을 평가하는 데 더 적합하다.
+
+    ```json
+      "title": "Latency p95 (Histogram)",
+        "type": "timeseries",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le))",
+            "refId": "A"
+          }
+        ],
+        "gridPos": { "h": 8, "w": 24, "x": 0, "y": 0 }
     ```
 
     - API 요청 시 p95 지연시간이 시간 흐름에 따라 변화
     - Histogram 기반 metric이 정상적으로 집계됨을 확인
-
-    ![latencyp95](images/rep2-latencyp95.png)
 
 1. **결과 요약**
 
     ![granafadashboard](/images/rep2-granafadashboard.png)
 
     위 구성을 통해 API 서비스에 대한 트래픽, 오류, 지연시간을 Grafana 대시보드에서 통합적으로 관측할 수 있음을 확인. 이는 Prometheus 기반 메트릭 수집과 Grafana 시각화가 정상적으로 연동되었음을 의미하며, 서비스 상태를 실시간으로 파악할 수 있는 기본적인 Observability 환경을 구축하였다.
+
+    이 시각화 구성을 기반으로, 다음 단계에서는 Prometheus Alert Rule과 Alertmanagerf를 통해 이상 상태를 자동으로 감지하고 대응하는 Alerting 흐름을 구성한다.
+
+    See the full configuration here:
+    
+    - [grafana/provisioning/dashboards/sre-dashboard.json](grafana/provisioning/dashboards/sre-dashboard.json)
 
 #### 2.2.3 Alerting: Prometheus Alert Rule 또는 Grafana Alert
 
