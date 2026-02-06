@@ -115,26 +115,26 @@ curl -i http://localhost:8080/error
 API는 `/metrics`에서 Prometheus 형식의 메트릭을 노출하며, Prometheus는 해당 엔드포인트를 scrape하여 시계열 데이터로 저장한다.
 본 프로젝트에서는 API의 요청 수/지연시간/오류 응답 같은 신뢰성 지표(SLI 후보)를 수집하기 위해 Prometheus를 사용합니다.
 
-##### **2.2.1.1 API and prometheus metrics structure**
+#### **2.2.1.1 API and prometheus metrics structure**
 
 ![apiprometheusmetricstructure](/images/rep2-prometheus-metrics-structure.png)
 
 Prometheus는 기본 `scrape_interval`(15s)에 따라 API의 `/metrics` 엔드포인트를 주기적으로 수집한다.
 `scrape_interval=15s`는 데모 환경에서 메트릭 반응성을 확보하면서 과도한 scrape 부하를 피하기 위한 기본값으로 설정하였다.
 
-##### **2.2.1.2 API 노출(expose)**
+#### **2.2.1.2 API 노출(expose)**
 
 ![api-metrics](images/rep2-api-metrics.png)
 
 사용자가 확인하는 URL은 `http://localhost:8080/metrics` 이며, Prometheus는 docker network 내부에서 `http://api:8080/metrics` 를 scrape 대상으로 사용한다.
 
-##### **2.2.1.3 prometheus 수집(scrape)**
+#### **2.2.1.3 prometheus 수집(scrape)**
 
 ![prometheus](images/rep2-prometheus-metrics.png)
 
 사용자가 확인하는 URL은 `http://localhost:9090/metrics` 이며, Prometheus는 docker network 내부에서 `http://prometheus:9090/metrics` 를 scrape 하는 주체로 사용한다.
 
-##### **2.2.1.4 query at prometheus graph**
+#### **2.2.1.4 query at prometheus graph**
 
 ![query](images/rep2-query.png)
 
@@ -152,7 +152,7 @@ Grafana는 UI에서 수동으로 Data source / Dashboard를 생성하지 않고,
 
 이는 환경 차이로 인한 관측 편차를 제거하고, 실험 및 장애 재현시 동일한 기준선(baseline)을 유지하기 위함이다.
 
-##### **2.2.2.1 Data source provisioning**
+#### **2.2.2.1 Data source provisioning**
 
 - Prometheus data source를 UID기준(uid: prometheus) 으로 고정하여, 대시보드가 안정적으로 참조할 수 있게 구성하였다.
 - Prometheus URL은 docker netwrok 내부 서비스명 기반으로 설정한다: `http://prometheus:9090`
@@ -171,7 +171,7 @@ See the full configuration here:
   
 - [grafana/provisioning/datasources/prometheus.yml](grafana/provisioning/datasources/prometheus.yml)
 
-##### **2.2.2.2 Dashboard provisioning**
+#### **2.2.2.2 Dashboard provisioning**
 
 - Grafana 기동 시 `grafana/dashboards/` 디렉터리의 JSON 대시보드(예: `sre-dashboard.json`)를 자동 로딩한다.
 
@@ -195,7 +195,7 @@ See the full configuration here:
 
 - [grafana/provisioning/datasources/dashboard.yml](grafana/provisioning/datasources/dashboard.yml)
 
-##### **2.2.2.3 Dashboard panel configuration**
+#### **2.2.2.3 Dashboard panel configuration**
 
 - 기본 대시보드에는 다음 3개의 패널을 포함한다.
 
@@ -294,14 +294,14 @@ See the full configuration here:
 
 Prometheus는 Alert Rule을 평가하여 Alert 이벤트를 생성하지만, 실제 알림 전송(Mail, Slack 등), 그룹화, 중복제거는 Alertmanager가 담당한다.
 
-##### **2.2.3.1 Alerting Architecture**
+#### **2.2.3.1 Alerting Architecture**
 
 ![alteringarchitecture](/images/rep2-alertingarchitecture.png)
 
 본 프로젝트에서는 서비스 신뢰성 위반을 감지하기 위해 Prometheus Alert Rule을 사용한다.
 Alert는 SLI 후보 지표인 Availability, Error Rate, Latency를 기반으로 정의된다.
 
-##### **2.2.3.2 Alert Validation Summary**
+#### **2.2.3.2 Alert Validation Summary**
 
 - Prometheus가 `alert-rules.yml`에 정의된 규칙을 정상적으로 평가함을 확인.
 - Alert는 Inactive -> Firing -> Resolved 상태 전이를 의도한 대로 수행하였다.
@@ -341,7 +341,7 @@ Alert는 SLI 후보 지표인 Availability, Error Rate, Latency를 기반으로 
 
     Alert rule, Alertmanager 설정, webhook receiver는 docker-compose 기반으로 정의 되어 있으며, 동일한 환경을 구성할 경우 누구나 동일한 Alert 검증 과정을 재현할 수 있다.
 
-##### ##2.2.3.3 Validation Evidence##
+#### ##2.2.3.3 Validation Evidence##
 
 Alert validation 과정에서 다음과 같은 증적을 확보하였다.
 
@@ -368,7 +368,7 @@ Alert validation 과정에서 다음과 같은 증적을 확보하였다.
         };
         ```
 
-##### **2.2.3.4 Observation & Imporovements**
+#### **2.2.3.4 Observation & Imporovements**
 
 - 'for' 값은 Alert 반응 속도와 noise 간의 trade-off가 존재하며, 운영환경에 따라 추가적인 튜닝이 필요하다.
 - p95 latency 기준값은 초기 가설로 설정되었으며, 실제 트래픽 패턴에 따라 조정이 필요하다.
@@ -416,7 +416,7 @@ Based on these criteria, the following SLI are selected:
 
 > 아래는 서비스 신뢰성을 측정하기 위해 선택한 세가지 SLI와 그 정의를 설명한다.
 
-##### **SLI-A: Success Rate (Availability)**
+#### **SLI-A: Success Rate (Availability)**
 
 **Definition**
 Ratio of successful HTTP requests to total evaluated requests.
@@ -441,7 +441,7 @@ Ratio of successful HTTP requests to total evaluated requests.
     )
     ```
 
-##### **SLI-2: Request Latency(p95)**
+#### **SLI-2: Request Latency(p95)**
 
 **Definition**
 95th percentile of HTTP request latency measured using histogram metrics.
@@ -457,7 +457,7 @@ Ratio of successful HTTP requests to total evaluated requests.
         )
     )
 
-##### **SLI-3: Error Rate (5xx)**
+#### **SLI-3: Error Rate (5xx)**
 
 **Definition**
 Ratio of server-side error responses (HTTP 5xx) over total incoming requests.
@@ -471,21 +471,21 @@ Ratio of server-side error responses (HTTP 5xx) over total incoming requests.
 
 #### 2.3.4 SLO definitions
 
-##### **SLO-1: Availability**
+#### **SLO-1: Availability**
 
 - **SLI**: Success Rate
 - **Objective** : ≥ 99.9%
 - **Time window**: Rolling 30days
 - **Scope**: All service endpoints
 
-##### **SLO-2: Latency**
+#### **SLO-2: Latency**
 
 - **SLI**: Request Latency (p95)
 - **Objective**: ≤ 300ms
 - **Time window**: Rolling 30days
 - **Scope**: Critical user-facing endpoints
 
-##### **SLO-3: Error Rate**
+#### **SLO-3: Error Rate**
 
 - **SLI**: Error Rate (5xx)
 - **Objective**: ≤ 0.1%
@@ -515,7 +515,7 @@ Error Budget은 정의된 **SLO를 기준으로 허용 가능한 실패 범위**
 
 즉, SLO 평가 기간 동안 전체 요청 중 최대 0.1%ㄲ지의 HTTP 5xx 오류는 Availability SLO 위반으로 간주되지 않는다.
 
-##### **운영 관점에서의 해석**
+#### **운영 관점에서의 해석**
 
 Error Budget은 서비스 운영 시 우선 순위를 결정하기 위한 기준으로 활용된다.
 
@@ -532,7 +532,7 @@ Error Budget은 서비스 운영 시 우선 순위를 결정하기 위한 기준
 
 #### 2.4.1 Incident Scenario Overview
 
-##### **2.4.1.1 목적**
+#### **2.4.1.1 목적**
 
 본 장애 시나리오의 목적은 실제 운영 환경에서 발생할 수 있는 단일하고 현실적인 장애 상황을 재현하고, 사전에 정의한 SLI/SLO 기반 Alert이 정상적으로 동작하는지를 검증하는 데 있다.
 
@@ -544,7 +544,7 @@ Error Budget은 서비스 운영 시 우선 순위를 결정하기 위한 기준
 
 본 섹션은 장애를 '만드는 것'이 아니라, 장애를 어떻게 인지하고 관리했는지를 보여주는 데 중점을 둔다.
 
-##### **2.4.2.2 선택한 장애 시나리오**
+#### **2.4.2.2 선택한 장애 시나리오**
 
 - Scenario:  API서버에서 HTTP 5xx 오류 지속 발생하는 상황
 - 유형: Server-side failure
@@ -556,7 +556,7 @@ Error Budget은 서비스 운영 시 우선 순위를 결정하기 위한 기준
 
 #### 2.4.2 Failure Injection(장애 유도)
 
-##### **2.4.2.1 장애 유도 방식**
+#### **2.4.2.1 장애 유도 방식**
 
 장애는 API 서비의 `/error` 엔드포인트를 활용하여 의도적으로 HTTP 500 응답을 일정 시간동안 반복 요청을 발생시켜 의도적으로 오류 트래픽을 유지.
 
@@ -592,7 +592,7 @@ Error Budget은 서비스 운영 시 우선 순위를 결정하기 위한 기준
 
 본 장애 유도 방식은 재현 가능하며, 실험 종료 후 즉시 정상 상태로 복구할 수 있도록 설계되었다. 동일한 docker-compose 환경에서는 별도 도구 설치 없이 누구나 재현 가능하다.
 
-##### **2.4.2.2 기대 효과**
+#### **2.4.2.2 기대 효과**
 
 - HTTP 5xx 응답 증가로 Error Rate (5xx) SLI상승
 - Availability SLO에 영향을 주는 조건 충족
@@ -604,7 +604,7 @@ Error Budget은 서비스 운영 시 우선 순위를 결정하기 위한 기준
 
 #### 2.4.3 Detection (장애 감지)
 
-##### **2.4.3.1 감지 수단**
+#### **2.4.3.1 감지 수단**
 
 본 장애는 Prometheus Alert Rule(alert-rules.yml)을 통해 감지되었다.
 
@@ -632,7 +632,7 @@ Error Budget은 서비스 운영 시 우선 순위를 결정하기 위한 기준
 
 해당 Alert는 API 서비스의 Error Rate (HTTP 5xx)를 지속적으로 관측하며, 사전에 정의한 SLI/SLO 기준을 벗어나는 경우 Incident를 감지하도록 설계되었다.
 
-##### **2.4.3.2 감지 과정**
+#### **2.4.3.2 감지 과정**
 
 장애 유도 이후 다음과 같은 감지 과정이 수행되었다.
 
@@ -681,7 +681,7 @@ HighErrorRate Alert는 Prometheus Alerts API를 통해 평가되었다.
 
 이는 일시적인 오류가 아닌, 지속적인 SLI 위한 상황임을 확인하기 위한 'for'조건이 정상적으로 적용되었음을 의미한다.
 
-##### **2.4.3.3 감지 시간**
+#### **2.4.3.3 감지 시간**
 
 - 장애 발생 시점 기준 약 N분후 Alert가 Firing 상태로 전이.
   ![statetransition](/images/rep4-2433-statetransition.png)
@@ -696,7 +696,7 @@ HighErrorRate Alert는 Prometheus Alerts API를 통해 평가되었다.
 
 #### 2.4.4 Impact Analysis (영향 분석)
 
-##### **2.4.4.1 사용자 영향**
+#### 2.4.4.1 사용자 영향
 
 이번 장애로 인해 일부 API 요청이 HTTP 500 응답으로 실패아였으며, 이에 따라 정산적인 응답을 기대하는 클라이언트 요청 처리가 불가능한 상태가 발생하였다. 사용자 관점에서는 요청실패가 즉시 인지 가능한 수준의 영향으로 나타났다.
 
@@ -714,7 +714,7 @@ HighErrorRate Alert는 Prometheus Alerts API를 통해 평가되었다.
 > 장애 발생 전후 특정 시간 범위의 API 서버 로그를 확인한 결과, 해당 구간에서 다수의 HTTP 500 응답이 발생한 것을 확인하였다. 이는 서버가 정상적인 요청을 처리하지 못한 상태였음을 의미한다.
 본 장애는 서버 측 오류로 인해 발생하였으며,클라이언트 재시도 여부와 관계없이 사용자 또는 외부 시스템 입장에서는 서비스 신뢰성 저하로 인식될 수 있는 장애로 분류된다.
 
-##### **2.4.4.2 SLO 영향**
+#### 2.4.4.2 SLO 영향
 
 본 장애는 사전에 정의한 SLO 중 Availability SLO 및 Error Rate SLI에 영향을 미쳤다.
 (참고: [2.3 SLI/SLO 설계](#23-slislo-설계))
@@ -741,7 +741,7 @@ HighErrorRate Alert는 Prometheus Alerts API를 통해 평가되었다.
 
 #### 2.4.5 Response (대응)
 
-##### **2.4.5.1 초기 대응**
+#### 2.4.5.1 초기 대응
 
 Alert 발생 이후, 우선적으로 **서비스 상태 및 장애 범위 확인**을 수행하였다.
 
@@ -751,7 +751,7 @@ Alert 발생 이후, 우선적으로 **서비스 상태 및 장애 범위 확인
 
 초기 대응 단계에서는 **즉각적인 조치보다 상황 파악을 우선**하여, 불필요한 대응이나 오판을 방지하는 데 중점을 두었다.
 
-##### **2.4.5.2 조치 내용**
+#### 2.4.5.2 조치 내용
 
 장애 원인이 의도적으로 주입된 오류임을 확인한 이후, 다음과 같은 조치를 수행하였다.
 
@@ -762,7 +762,7 @@ Alert 발생 이후, 우선적으로 **서비스 상태 및 장애 범위 확인
 
 조치는 서비스의 정상 동작을 회복시키는 데 필요한 최소한의 범위로 제한하였다.
 
-##### **2.4.5.3 대응 방식**
+#### 2.4.5.3 대응 방식
 
 - 대응 유형: 수동 대응
 - 대응 기준: Runbook 기반의 표준 점검 절차 수행
@@ -775,7 +775,7 @@ Alert 발생 이후, 우선적으로 **서비스 상태 및 장애 범위 확인
 
 #### 2.4.6 Recovery (복구)
 
-##### **2.4.6.1 복구 시점**
+#### 2.4.6.1 복구 시점
 
 장애 유도 중단 이후 API 서비스의 정상 응답이 확인 되었으며, 이에 따라 Alert 상태가 정상적으로 해제되었다.
 
@@ -784,7 +784,7 @@ Alert 발생 이후, 우선적으로 **서비스 상태 및 장애 범위 확인
 
 이는 Error Rate SLI가 정의된 정상 범위로 복귀했음을 의미한다.
 
-##### **2.4.6.2 회복 지표**
+#### 2.4.6.2 회복 지표
 
 복구 여부는 개별 요청의 성공 여부가 아니라, **사전에 정의한 SLI/SLO 기준**을 통해 판단하였다.
 
@@ -797,7 +797,7 @@ Alert 발생 이후, 우선적으로 **서비스 상태 및 장애 범위 확인
 
 #### 2.4.7 Lessons Learned
 
-##### **2.4.7.1 잘 된 점**
+#### 2.4.7.1 잘 된 점
 
 - Error Rate 기반 Alert가 Availability SLO 위반 징후를 조기에 감지함
 - 장애 발생 -> 감지 -> 대응 -> 복구까지의 Incident Response 흐름이 명확하게 검증됨
@@ -805,7 +805,7 @@ Alert 발생 이후, 우선적으로 **서비스 상태 및 장애 범위 확인
 
 본 실험을 통해 Alert가 단순한 알림이 아니라, **서비스 신뢰성을 보호하기 위한 운영 도구**로 기능함을 확인.
 
-##### **2.4.7.2 개선 할 점**
+#### 2.4.7.2 개선 할 점
 
 - 단일 지표(Error Rate) 기반 Alert은 상황에 따라 noise를 유발할 수 있음
 - Alert 조건이 SLI중심으로 구성되어 있어, SLO 관점에서의 장기적 신뢰성 판단에는 한계가 존재함
@@ -815,7 +815,7 @@ Alert 발생 이후, 우선적으로 **서비스 상태 및 장애 범위 확인
 - SLO기반 Alert 도입
 - Multi-window/ Multi-burn-rate Alert를 통한 false positive 감소
 
-##### **2.4.7.3 향후 계획**
+#### 2.4.7.3 향후 계획
 
 - Latency(p95) 기반 장애 시나리오를 추가하여 응답 지연이 사용자 경험에 미치는 영향을 추가적으로 검증
 - Incident Response 과정에서 반복적으로 수행되는 절차를 Runbook 형태로 문서화 및 확장
