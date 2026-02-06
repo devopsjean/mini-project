@@ -1,15 +1,48 @@
+# Alertmanager configuration (local-only delivery)
+# - Purpose in this mini-project:
+#   1) Receive alerts from Prometheus
+#   2) Apply grouping / dedup / timing controls
+#   3) Deliver notifications to a local webhook (no external SaaS dependency)
+
 global:
+  # How long Alertmanager waits before considering an alert "resolved"
+  # if it stops receiving firing updates.
+  # - Short value is fine for demos because you want quick "Resolved" evidence.
   resolve_timeout: 1m
 
 route:
+  # Default receiver for all alerts (unless you add sub-routes later).
   receiver: "local-webhook"
+
+  # Grouping keys:
+  # - alertname: group same alert type together
+  # - job: avoid mixing alerts from different scrape jobs (api vs prometheus)
+  # Tip: add "instance" if you run multiple replicas and want per-instance notifications.
   group_by: ["alertname", "job"]
+
+  # Wait before sending the first notification for a new group.
+  # - Trade-off:
+  #   * Lower => faster paging, more noise on short spikes
+  #   * Higher => fewer false alarms, slower evidence
   group_wait: 10s
+
+  # Minimum interval between notifications for the same group when new alerts join.
+  # - For a demo, 30s helps you observe grouping behavior without waiting too long.
   group_interval: 30s
+
+  # Minimum interval for repeated notifications for ongoing alerts.
+  # - For real paging this might be shorter/longer depending on policy.
+  # - In this mini-project, 1h prevents repeated spam while you collect evidence.
   repeat_interval: 1h
 
 receivers:
   - name: "local-webhook"
     webhook_configs:
+      # Local receiver running inside the docker-compose network:
+      # - Service name "webhook" is resolved via Docker DNS.
+      # - Use trailing slash only if your webhook server expects it.
       - url: "http://webhook:9001/"
+
+        # Also send "Resolved" events so you can prove:
+        # Firing -> Resolved end-to-end (Alertmanager -> webhook) in logs.
         send_resolved: true
