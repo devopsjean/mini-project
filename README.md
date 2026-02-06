@@ -15,6 +15,21 @@
 
 ---
 
+## 1. Quick Start
+
+### Prerequisites
+
+- Docker
+- Docker Compose (v2)
+
+### Run the stack
+
+```bash
+git clone https://github.com/devopsjean/mini-project.git
+cd <repo>
+docker compose up -d
+```
+
 ## 2.요구사항
 
 ### 2.1. 서비스(API) - Verification
