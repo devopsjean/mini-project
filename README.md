@@ -30,6 +30,39 @@ cd <repo>
 docker compose up -d
 ```
 
+### Verify Running Services
+
+After starting the statck, verify the all services are running:
+
+```bash
+docker compose ps
+```
+
+You shoud see all services in `Up`state, similar to the following:
+
+```text
+NAME           SERVICE        STATUS         PORTS
+api            api            Up             0.0.0.0:8080->8080/tcp
+prometheus     prometheus     Up             0.0.0.0:9090->9090/tcp
+grafana        grafana        Up             0.0.0.0:3000->3000/tcp
+alertmanager   alertmanager   Up             0.0.0.0:9093->9093/tcp
+webhook        webhook        Up             0.0.0.0:9001->9001/tcp
+```
+
+### Verify Service Endpoints
+
+After confirming that all containers are running, verify that each service
+is accessible via the following URLs:
+
+- **API Health Check**: [http://localhost:8080/health](http://localhost:8080/health)
+- **API Metrics**: [http://localhost:8080/metrics](http://localhost:8080/metrics)
+- **Grafana UI**: [http://localhost:3000](http://localhost:3000)
+- **Prometheus UI**: [http://localhost:9090](http://localhost:9090)
+- **Alertmanager UI**: [http://localhost:9093](http://localhost:9093)
+
+All endpoints should be reachable before proceeding to observability
+and alert validation steps.
+
 ## 2.요구사항
 
 ### 2.1. 서비스(API) - Verification
