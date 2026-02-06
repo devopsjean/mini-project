@@ -17,12 +17,12 @@
 
 ## 1. Quick Start
 
-### Prerequisites
+### 1.1 Prerequisites
 
 - Docker
 - Docker Compose (v2)
 
-### Run the stack
+### 1.2 Run the stack
 
 ```bash
 git clone https://github.com/devopsjean/mini-project.git
@@ -30,7 +30,7 @@ cd <repo>
 docker compose up -d
 ```
 
-### Verify Running Services
+### 1.3 Verify Running Services
 
 After starting the statck, verify the all services are running:
 
@@ -49,7 +49,7 @@ alertmanager   alertmanager   Up             0.0.0.0:9093->9093/tcp
 webhook        webhook        Up             0.0.0.0:9001->9001/tcp
 ```
 
-### Verify Service Endpoints
+### 1.4 Verify Service Endpoints
 
 After confirming that all containers are running, verify that each service
 is accessible via the following URLs:
