@@ -13,9 +13,13 @@
 
 ![structure](images/structure.png)
 
+---
+
 ## 2.요구사항
 
 ### 2.1. 서비스(API) - Verification
+
+---
 
 본 API는 신뢰성 테스트 목적의 서비스로, 정상 응답/의도적 지연/의도적 5xx 오류를 재현할 수 있다.
 
@@ -53,6 +57,8 @@ curl -i http://localhost:8080/error
 ![errorcheck](images/rep1-error.png)
 
 ### 2.2. Observability 스택
+
+---
 
 본 프로젝트는 Metrics 기반 관측 가능성(Observability)을 목표로 하며, 아래 구성으로 수집/시각화/알림을 구현합니다.
 
@@ -226,7 +232,7 @@ See the full configuration here:
     이 시각화 구성을 기반으로, 다음 단계에서는 Prometheus Alert Rule과 Alertmanagerf를 통해 이상 상태를 자동으로 감지하고 대응하는 Alerting 흐름을 구성한다.
 
     See the full configuration here:
-    
+
     - [grafana/provisioning/dashboards/sre-dashboard.json](grafana/provisioning/dashboards/sre-dashboard.json)
 
 #### 2.2.3 Alerting: Prometheus Alert Rule 또는 Grafana Alert
@@ -275,7 +281,6 @@ Alert는 SLI 후보 지표인 Availability, Error Rate, Latency를 기반으로 
         - Alertmanager 로그에서 APIDown Alert에 대해 `receiver=local-webhook`으로 전송이 수행되었고 `Notify success`가 기록된 것을 확인.
         - Webhook receiver 로그에서 APIDown Alert가 포함된 payload(JSON)를 수신했으며, 해당 요청에 대해 HTTP 200 응답을 반환하여 전달 성공을 검증하였다.
 
-
 1. **Validation Result**
 
     - Alert는 Inactive → Firing → Resolved 상태 전이를 의도한 조건에 따라 정확히 수행하였다.
@@ -323,6 +328,8 @@ Alert validation 과정에서 다음과 같은 증적을 확보하였다.
 
 ### 2.3. SLI/SLO 설계
 
+---
+
 > 이 섹션에서는 서비스의 신뢰성을 측정하기 위한 SLI와 정량적 목표인 SLO를 정의한다.
 
 ![slilodesign](/images/rep3-slislodesign.png)
@@ -343,8 +350,6 @@ Out of scope:
 - DNS resolution issues
 - Non-production environments
 
----
-
 ### 2.3.2 SLI Selection Rationale
 
 Service reliability is evaluated using indicators that are:
@@ -358,8 +363,6 @@ Based on these criteria, the following SLI are selected:
 - Availability (Success Rate)
 - Latency (p95)
 - Error Rate (5xx)
-
----
 
 ### 2.3.3 SLI Definitions
 
@@ -418,8 +421,6 @@ Ratio of server-side error responses (HTTP 5xx) over total incoming requests.
     Error Rate = 5xx Requests / Total Requests
     ```
 
----
-
 ### 2.3.4 SLO definitions
 
 #### SLO-1: Availability
@@ -476,6 +477,8 @@ Error Budget은 서비스 운영 시 우선 순위를 결정하기 위한 기준
 본 문서에서는 Error Budget을 설계 수준에서 정의하여, SLO 기반 Alerting 및 향후 운영 정책으로 확장할 수 있는 기초 기준을 마련하는 데 목적이 있다.
 
 ### 2.4. 장애 시나리오 및 Incident Response
+
+---
 
 이 섹션에서는 서비스 운영 중 발생할 수 있는 장애를 의도적으로 재현하고, 장애 감지부터 복구 및 학습까지의 Incident Response 흐름을 SRE 관점에서 정리한다. 본 목적은 장애 자체가 아니라, 장애를 어떻게 인지하고 관리했는지를 보여주는 데 있다.
 
@@ -628,8 +631,6 @@ HighErrorRate Alert는 Prometheus Alerts API를 통해 평가되었다.
 또한 activeAt 타임스탬프를 통해, 조건이 Alert를 트리거하기에 충분한 시간 동안
 유지되었음을 확인할 수 있다.
 
-  ![ ]
-
 이는 일시적인 오류가 아닌, 지속적인 SLI 위한 상황임을 확인하기 위한 'for'조건이 정상적으로 적용되었음을 의미한다.
 
 ##### 2.4.3.3 **감지 시간**
@@ -689,7 +690,6 @@ HighErrorRate Alert는 Prometheus Alerts API를 통해 평가되었다.
 또한 Error Rate 증가로 인해 Error Budget이 일부 소모되었으며, 이는 단일 장애 이벤트 자체보다는 SLO 평가 기간(Rolling window) 내에서의 누적 신뢰성 지표 관점에서 판단 되었다.
 
 > 본 장애는 사용자 경험에 직접적인 영향을 주는 **신뢰성 관점의 장애**로 분류 된다.
----
 
 #### 2.4.5 Response (대응)
 
@@ -724,7 +724,6 @@ Alert 발생 이후, 우선적으로 **서비스 상태 및 장애 범위 확인
 모든 대응 과정은 원인 분석과 재발 방지를 목적으로 하였으며, 개인 또는 특정 구성 요소에 책임을 전가하지 않는 **Blame-free 원칙**을 유지하였다.
 
 > 본 대응 과정에서 Blame-free 원칙을 유지하였다.
----
 
 #### 2.4.6 Recovery (복구)
 
@@ -747,7 +746,6 @@ Alert 발생 이후, 우선적으로 **서비스 상태 및 장애 범위 확인
 해당 지표들은 Grafana Dashboard 및 Prometheus 데이터를 통해 확인 되었다.
 
 > 서비스는 정의된 **SLO 기준 내의 정상 상태로 복구** 되었다.
----
 
 #### 2.4.7 Lessons Learned
 
@@ -778,6 +776,8 @@ Alert 발생 이후, 우선적으로 **서비스 상태 및 장애 범위 확인
 
 ### 2.5. RCA (Root Cause Analysis)
 
+---
+
 #### 2.5.1 장애 요약
 
 본 Incident는 API 서비스에서 HTTP 5xx 오류가 지속적으로 발생한 상황을 의도적으로 재현한 실험이다.장애는 FastAPI 서비스의 `/error` 엔드포인트를 반복 호출함으로써 서버 측 오류 트래픽을 유지하는 방식으로 유도되었으며, 그 결과 Error Rate (5xx) SLI가 급격히 상승하였다.
@@ -785,8 +785,6 @@ Alert 발생 이후, 우선적으로 **서비스 상태 및 장애 범위 확인
 이로 인해 사전에 정의한 Availability SLO 및 Error Rate SLI 기준을 사전에 정의한 Availability SLO 및 Error Rate SLI 기준을 기준으로, 본 장애 구간은 SLO 위반 또는 Error Budget 소모가 발생한 상태로 평가되었다.
 
 본 Incident의 목적은 장애 자체가 아니라, SLI/SLO 기반 Alert → Response → Recovery 흐름이 실제 운영 환경과 유사하게 동작하는지 검증하는 데 있다.
-
----
 
 #### 2.5.2 영향 범위
 
