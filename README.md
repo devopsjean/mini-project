@@ -46,11 +46,11 @@ You shoud see all services in `Up`state, similar to the following:
 
 ```text
 NAME           SERVICE        STATUS         PORTS
-api            api            Up             0.0.0.0:8080->8080/tcp
-prometheus     prometheus     Up             0.0.0.0:9090->9090/tcp
-grafana        grafana        Up             0.0.0.0:3000->3000/tcp
-alertmanager   alertmanager   Up             0.0.0.0:9093->9093/tcp
-webhook        webhook        Up             0.0.0.0:9001->9001/tcp
+api            api            Up             0.0.0.0:8080→8080/tcp
+prometheus     prometheus     Up             0.0.0.0:9090→9090/tcp
+grafana        grafana        Up             0.0.0.0:3000→3000/tcp
+alertmanager   alertmanager   Up             0.0.0.0:9093→9093/tcp
+webhook        webhook        Up             0.0.0.0:9001→9001/tcp
 ```
 
 ### 1.4 Verify Service Endpoints
@@ -78,35 +78,59 @@ and alert validation steps.
 #### 2.1.1 정상 응답
 
 - Endpoint: `/health`
+
+    ```python
+    @app.get("/health")
+    def health():
+        return {"status": "ok"}
+    ```
+
 - Expected: HTTP `200` + JSON body
 
-```bash
-curl -i http://localhost:8080/health
-```
+    ```bash
+    curl -i http://localhost:8080/health
+    ```
 
-![health](images/rep1-health.png)
+    ![health](images/rep1-health.png)
 
 #### 2.1.2 의도적인 응답 지연
 
 - Endpoint: `/slow?ms=1000`
+
+    ```python
+    @app.get("/slow")
+    async def slow(ms: int = 300):
+        await asyncio.sleep(ms / 1000.0)
+        return {"status": "ok", "delay_ms": ms}
+    ```
+
 - Expected: HTTP `200`, total time ≈ `1s` 이상
 
-```bash
-curl -s -w '\nstatus=%{http_code} total=%{time_total}s\n' 'http://localhost:8080/slow?ms=1000' -o /dev/null
-```
+    ```bash
+    curl -s -w '\nstatus=%{http_code} total=%{time_total}s\n' 'http://localhost:8080/slow?ms=1000' -o /dev/null
+    ```
 
-![slowc](images/rep1-slow.png)
+    ![slowc](images/rep1-slow.png)
 
 #### 2.1.3 의도적인 오류
 
 - Endpoint: `/error`
+
+    ```python
+    @app.get("/error")
+    def error(code: int = 500):
+        if code < 500 or code > 599:
+            code = 500
+        raise HTTPException(status_code=code, detail=f"intentional {code} error")
+    ```
+
 - Expected: HTTP `500` (intentional)
 
-```bash
-curl -i http://localhost:8080/error
-```
+    ```bash
+    curl -i http://localhost:8080/error
+    ```
 
-![errorcheck](images/rep1-error.png)
+    ![errorcheck](images/rep1-error.png)
 
 ### 2.2. Observability 스택
 
@@ -308,7 +332,7 @@ Alert는 SLI 후보 지표인 Availability, Error Rate, Latency를 기반으로 
 #### 2.2.3.2 Alert Validation Summary
 
 - Prometheus가 `alert-rules.yml`에 정의된 규칙을 정상적으로 평가함을 확인.
-- Alert는 Inactive -> Firing -> Resolved 상태 전이를 의도한 대로 수행하였다.
+- Alert는 Inactive → Firing → Resolved 상태 전이를 의도한 대로 수행하였다.
 - Alertmanager는 수신된 Alert를 설정된 기준에 따라 정상적으로 라우팅 및 그룹화하였다.
 - Alert 전달은 로컬 webhook receiver를 통해 검증되었으며, HTTP 200을 통해 실제 전송이 이루어졌음을 확인.
 - 외부 서비스 (Slack, Email 등)에 의존하지 않고도 Alert 평가 및 전달 과정을 완전 재현 가능하게 구성하였다.
@@ -350,7 +374,7 @@ Alert는 SLI 후보 지표인 Availability, Error Rate, Latency를 기반으로 
 Alert validation 과정에서 다음과 같은 증적을 확보하였다.
 
 - **Alert State Transition**
-    Prometheus Alerts UI를 통해 APIDown Alert가 Inactive -> Pending -> Firing 상태로 전이 되는 것을 확인 하였다.
+    Prometheus Alerts UI를 통해 APIDown Alert가 Inactive → Pending → Firing 상태로 전이 되는 것을 확인 하였다.
 
 - **Alert Delivery**
     Alertmanager 로그를 통해 APIDown Alert가 정상적으로 수신되었으며, 설정된 route 및 group-by 정책에 따라 local-webhook receiver로 전달됨을 확인.
@@ -680,7 +704,7 @@ Error Budget은 서비스 운영 시 우선 순위를 결정하기 위한 기준
   ![higherrorratealert](/images/rep4-2422-higherrorrategalert.png)
 Alert의 상태는 다음 순서로 전이 되었다.
 
-  > Inactive -> Pending -> Firing
+  > Inactive → Pending → Firing
 
 HighErrorRate Alert는 Prometheus Alerts API를 통해 평가되었다.
 캡처된 출력에서 확인할 수 있듯이, Error Rate(5xx)가 정의된 임계치(5%)를 초과한 이후
@@ -789,7 +813,7 @@ Alert 발생 이후, 우선적으로 **서비스 상태 및 장애 범위 확인
 장애 유도 중단 이후 API 서비스의 정상 응답이 확인 되었으며, 이에 따라 Alert 상태가 정상적으로 해제되었다.
 
 - 장애 유도 중단 후 정상 응답 확인
-- Alert 상태 전이: 'firing -> Resolved'
+- Alert 상태 전이: 'firing → Resolved'
 
 이는 Error Rate SLI가 정의된 정상 범위로 복귀했음을 의미한다.
 
@@ -809,7 +833,7 @@ Alert 발생 이후, 우선적으로 **서비스 상태 및 장애 범위 확인
 #### 2.4.7.1 잘 된 점
 
 - Error Rate 기반 Alert가 Availability SLO 위반 징후를 조기에 감지함
-- 장애 발생 -> 감지 -> 대응 -> 복구까지의 Incident Response 흐름이 명확하게 검증됨
+- 장애 발생 → 감지 → 대응 → 복구까지의 Incident Response 흐름이 명확하게 검증됨
 - SLI/SLO를 기준으로 장애의 영향과 복구 여부를 일관되게 판단할 수 있었음
 
 본 실험을 통해 Alert가 단순한 알림이 아니라, **서비스 신뢰성을 보호하기 위한 운영 도구**로 기능함을 확인.
@@ -837,30 +861,30 @@ Alert 발생 이후, 우선적으로 **서비스 상태 및 장애 범위 확인
 
 #### 2.5.1 장애 요약
 
-본 Incident는 API 서비스에서 HTTP 5xx 오류가 지속적으로 발생한 상황을 의도적으로 재현한 실험이다.장애는 FastAPI 서비스의 `/error` 엔드포인트를 반복 호출함으로써 서버 측 오류 트래픽을 유지하는 방식으로 유도되었으며, 그 결과 Error Rate (5xx) SLI가 급격히 상승하였다.
+본 Incident는 API 서비스에서 HTTP `5xx` 오류가 지속적으로 발생한 상황을 **의도적으로 재현**한 실험이다.장애는 FastAPI 서비스의 `/error` 엔드포인트를 반복 호출함으로써 서버 측 오류 트래픽을 유지하는 방식으로 유도되었으며, 그 결과 `Error Rate (5xx)` SLI가 급격히 상승하였다.
 
-이로 인해 사전에 정의한 Availability SLO 및 Error Rate SLI 기준을 사전에 정의한 Availability SLO 및 Error Rate SLI 기준을 기준으로, 본 장애 구간은 SLO 위반 또는 Error Budget 소모가 발생한 상태로 평가되었다.
+이로 인해 `Availability` 관점의 `Success Rate`가 감소했으며, **SLO 위반 또는 Error Budget 소모가 발생한 상태로 평가될 수 있는 구간**이 관측되었다.
 
-본 Incident의 목적은 장애 자체가 아니라, SLI/SLO 기반 Alert → Response → Recovery 흐름이 실제 운영 환경과 유사하게 동작하는지 검증하는 데 있다.
+본 Incident의 목적은 장애 자체가 아니라, **SLI/SLO 기반 Alert → Response → Recovery 흐름이 운영 환경과 유사하게 동작하는지**를 검증하는 데 있다.
 
 #### 2.5.2 영향 범위
 
 - **사용자 영향**
-  - 일부 API 요청이 HTTP 500 응답으로 실패
+  - 일부 API 요청이 HTTP `500` 응답으로 실패
   - 정상 응답을 기대하는 클라이언트 요청이 처리되지 않음
-  - HTTP 500 응답 특성상, 클라이언트 또는 사용자 관점에서 요청 실패가 즉시 인지 가능한 장애로 인식됨
+  - HTTP `500` 응답 특성상, 클라이언트 또는 사용자 관점에서 요청 실패가 즉시 인지 가능한 장애로 인식됨
 
-  본 장애는 클라이언트 네트워크 문제나 사용자 입력 오류가 아닌, **서버 측 처리 실패(Server-side failure)**로 분류된다.
+  → 본 장애는 클라이언트 네트워크 문제나 사용자 입력 오류가 아닌, **서버 측 처리 실패(Server-side failure)**로 분류된다.
 
 - **SLO 영향**
-  - Availability SLO
-    - Success Rate 감소로 인해 SLO 위반 또는 위반에 근접한 상태로 평가됨
+  - **Availability SLO**
+    - `Success Rate` 감소로 인해 SLO 위반 또는 위반에 근접한 상태로 평가됨
 
-  - Error Rate SLI
+  - **Error Rate SLI**
     - HTTP 5xx 비율이 임계치(5%)를 초과하는 상태가 일정 시간 지속됨
 
-  - Error Budget
-    - Rolling 30일 기준 Availability SLO의 Error Budget 일부 소모
+  - **Error Budget**
+    - Rolling `30d` 기준 Availability SLO의 Error Budget 일부 소모
 
 - **비영향 범위**
   - 데이터 손실 없음
@@ -874,45 +898,42 @@ Alert 발생 이후, 우선적으로 **서비스 상태 및 장애 범위 확인
 | 단계 | 내용 |
 | ------ | ------ |
 | 장애 발생 | `/error` 엔드포인트 반복 호출을 통해 HTTP 500 응답 지속 발생 |
-| 지표 변화 | Error Rate (5xx) SLI 상승, Success Rate 감소 |
-| 감지 | Prometheus가 Error Rate SLI를 5분 슬라이딩 윈도우 기준으로 평가 |
-| Pending | 임계치 초과 상태가 지속되며 Alert가 Pending 상태로 전이 |
-| Firing | `for: 2m` 조건 충족 후 HighErrorRate Alert가 Firing 상태로 전이 |
+| 지표 변화 | `Error Rate (5xx)` SLI 상승, `Success Rate` 감소 |
+| 감지 | Prometheus가 `5m` 슬라이딩 윈도우 기준으로 Error Rate SLI 평가 |
+| Pending | 임계치 초과 상태가 지속되며 Alert가 `Pending` 상태로 전이 |
+| Firing | `for: 2m` 조건 충족 후 `HighErrorRate`가 `Firing` 상태로 전이 |
 | 대응 | Grafana 대시보드 및 로그를 통해 장애 범위 확인 |
 | 조치 | 장애 유도 중단 (`/error` 호출 중지 또는 API 재시작) |
-| 복구 | Error Rate 정상화, Alert 상태가 Resolved로 전이 |
+| 복구 | Error Rate 정상화, Alert 상태가 `Resolved`로 전이 |
 
-Alert 감지까지의 지연은 Alert Rule에 정의된 'for' 조건에 따른 정상적인 동작이며,
-이는 Alert noise를 줄이기 위한 의도된 설계로 판단된다. 이는 일시적인 오류로 인한 불필요한 Alert를 방지하고, Availability SLO를 안정적으로 보호하기 위한 의도된 설계로 판단된다.
+Alert 감지까지의 지연은 Alert Rule에 정의된 'for' 조건에 따른 **의도된 동작**이다.
+이는 일시적인 오류로 인한 불필요한 Alert를 줄이고(Noise 감소), **Availability SLO 보호를 위한 신뢰성 신호만 경고**하기 위한 설계다.
 
 #### 2.5.4 Root Cause
 
 - **직접 원인 (Direct Cause)**
-  - API 서비스의 `/error` 엔드포인트가 항상 HTTP 500 응답을 반환하도록 설계된 로직
+  - `/error` 엔드포인트가 항상 HTTP `500`을 반환하도록 설계됨
   - 해당 엔드포인트에 대한 반복 호출로 인해 서버 오류 트래픽이 지속적으로 발생
 
 - **근본 원인 (Root Cause)**
-  - 의도적으로 주입된 서버 오류 로직이 활성화된 상태에서,
+  - **Controlled Failure Injection** 시나리오에서,
   - Error Rate SLI를 기준으로 한 Alert 조건을 충족할 만큼의 오류 트래픽이 유지됨
 
-  이는 코드 결함이나 인프라 장애가 아닌,
-  신뢰성 검증을 목적으로 한 Controlled Failure Injection의 결과이다.
+  이는 코드 결함이나 인프라 장애가 아니라, **신뢰성 검증 목적의 통제된 장애 주입** 결과이다.
 
 #### 2.5.5 재발 방지 대책
 
 - **단기 개선**
   - 장애 유도용 엔드포인트(`/error`)는 실험 환경에서만 활성화
-  - 실험 종료 후 즉시 비활성화 또는 접근 제한
+  - 실험 종료 후 즉시 비활성화 또는 접근 제한(예: auth/IP allowlist)
   - Runbook에 “의도적 장애 주입 여부 확인” 단계 명시
 
 - **중·장기 개선**
-  - **SLO** 기반 **Alert** 도입
-    - 단일 Error Rate 임계치 Alert 대신,
-    - Error Budget 소모 속도를 기준으로 한 Alert 설계
-
+  - **SLO 기반 Alert 도입**
+    - 단일 임계치 기반(Error Rate threshold) 대신 Error Budget 소모 속도 기반 Alert 설계
   - **Multi-window / Multi-burn-rate Alert**
-    - 단기 스파이크와 지속적 장애를 구분하여 Alert noise 감소
+    - 단기 스파이크 vs 지속 장애를 구분하여 Alert noise 감소
   - **Latency 기반 장애 시나리오 추가**
-    - p95 latency 상승이 사용자 경험에 미치는 영향 검증
-  - **Incident 대응 절차의 Runbook화**
+    - `p95 latency` 상승이 사용자 경험에 미치는 영향 검증
+  - **Incident 대응 절차 Runbook화**
     - 감지 → 판단 → 대응 → 복구 단계를 명문화하여 재현성 확보
