@@ -13,5 +13,5 @@ COPY receiver.py /app/receiver.py
 # Alertmanager webhook receiver port (must match alertmanager.yml receiver URL)
 EXPOSE 9001
 
-# Run the receiver in foreground so container logs become evidence artifacts
+# Run the receiver in foreground so container logs become evidence artifactsg
 CMD ["python", "/app/receiver.py"]
