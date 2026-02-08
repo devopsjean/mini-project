@@ -601,7 +601,7 @@ Success Rate = Good Requests / (Good Requests + Bad Requets)
 
 ```promql
 (
-  sum(rate(http_requests_total{Pjob"fastapi", status=~"2..|3.."}[5m]))
+  sum(rate(http_requests_total{job"fastapi", status=~"2..|3.."}[5m]))
 )
 /
 (
