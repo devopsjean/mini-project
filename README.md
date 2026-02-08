@@ -60,8 +60,8 @@ webhook        webhook        Up             0.0.0.0:9001→9001/tcp
 모든 컨테이너가 정상적으로 실행 중임을 확인한 후, 각 서비스의 접근 가능 여부를 아래 URL를 통해 검증한다.
 
 - **API 상태 확인**: [http://localhost:8080/health](http://localhost:8080/health)
-- **API 메트릭 노출**: [http://localhost:8080/metrics](http://localhost:8080/metrics)
-- **Grafana UI**: [http://localhost:3000](http://localhost:3000)
+- **API Metric 노출**: [http://localhost:8080/metrics](http://localhost:8080/metrics)
+- **Grafana UI**: [http://localhost:3000](http://localhost:3000)(기본 관리자 계정으로 접근 가능)
 - **Prometheus UI**: [http://localhost:9090](http://localhost:9090)
 - **Alertmanager UI**: [http://localhost:9093](http://localhost:9093)
 
@@ -76,8 +76,8 @@ webhook        webhook        Up             0.0.0.0:9001→9001/tcp
 본 API는 신뢰성 테스트 목적으로 설계된 테스트용 서비스로, 다음과 같은 세 가지 동작을 의도적으로 재현할 수 있다.
 
 - 정상 응답
-- 의도적인 잉답 지연
-- 의도적인 서버 오류(HTTP 5xx)
+- 의도적인 응답 지연(Latency)
+- 의도적인 서버 오류(HTTP `5xx`)
 
 #### 2.1.1 정상 응답
 
@@ -103,7 +103,7 @@ webhook        webhook        Up             0.0.0.0:9001→9001/tcp
 
 #### 2.1.2 의도적인 응답 지연
 
-지연(latency)이 서비스 신뢰성 지표에 미치는 영향을 관측하기 위한 Endpoint이다.
+지연(Latency)이 서비스 신뢰성 지표에 미치는 영향을 관측하기 위한 Endpoint이다.
 
 - Endpoint: `/slow?ms=1000`
 
@@ -122,7 +122,7 @@ webhook        webhook        Up             0.0.0.0:9001→9001/tcp
 
     ![slowc](images/rep1-slow.png)
 
-이 Endspoint는 평균 응답 시간이 아닌 p95와 같은 tail latency 관측을 위한 실험 입력값으로 활용된다.
+이 Endspoint는 평균 응답 시간이 아닌 `p95`와 같은 tail latency 관측을 위한 실험 입력값으로 활용된다.
 
 #### 2.1.3 의도적인 오류
 
@@ -158,31 +158,31 @@ API의 전체 구현은 다음 파일에서 확인 할 수 있다.
 
 ---
 
-본 프로젝트는 **Metrics 기반 관측 가능성(Observability)**을 목표로 하며, 아래 구성으로 `수집 → 시각화 → 알림` 흐름을 단계적으로 구성한다.
+본 프로젝트는 **Metrics 기반 관측 가능성(Observability)**을 목표로 하며, 아래 구성으로 `수집(Collect) → 시각화(Visualize) → 알림(Alert)` 흐름을 단계적으로 구성한다.
 
 #### 2.2.1 Metrics: Prometheus
 
-본 프로젝트에서 Prometheus는 서비스 상태를 정량적으로 관측하기 위한 메트릭 수집 시스템으로 사용된다.
+본 프로젝트에서 Prometheus는 서비스 상태를 정량적으로 관측하기 위한 Metric 수집(Collet) 시스템으로 사용된다.
 
-API 서비스는 `/metrics` 엔드포인트를 통해 Prometheus 형식의 메트릭을 노출하며, Prometheus는 해당 엔드포인트를 주기적으로 수집(`scrape`)하여 시계열 데이터 형태로 저장한다.
+API 서비스는 `/metrics` Endpoint를 통해 Prometheus 형식의 Metric을 노출하며, Prometheus는 해당 Endpoint를 주기적으로 수집(`Scrape`)하여 시계열 데이터 형태로 저장한다.
 
-본 프로젝트에서는 API의 `요청 수 / 지연시간 / 오류` 응답 같은 신뢰성 지표(SLI 후보)를 수집하기 위해 Prometheus를 사용한다.
+본 프로젝트에서는 API의 `요청 수(Request Rate) / 지연시간(Latency) / 오류(Error Rate, HTTP '5xx')` 응답 같은 신뢰성 지표(SLI 후보)를 수집(Collect) 하기 위해 Prometheus를 사용한다.
 
-- 요청 수 (Traffic)
+- 요청 수 (Request Rate)
 - 요청 지연시간 (Latency)
-- 서버 요류 응답 (HTTP `5xx`)
+- 서버 오류 응답 (Error Rate, HTTP '5xx')
 
-이 메트릭들은 이후 단계에서
+이 Metric들은 이후 단계에서
 **SLI/SLO 정의, Error Budget 계산, Alert Rule설계**의 기반 데이터로 활용된다
 
 #### 2.2.1.1 API and Prometheus metrics structure
 
 ![apiprometheusmetricstructure](/images/rep2-prometheus-metrics-structure.png)
 
-Prometheus는 기본 설정된 `scrape_interval` 값(`15s`)에 따라 API의 `/metrics` 엔드포인트를 주기적으로 수집한다.
+Prometheus는 기본 설정된 `scrape_interval` 값(`15s`)에 따라 API의 `/metrics` Endpoint를 주기적으로 수집한다.
 `scrape_interval=15s`는 다음의 기준으로 설정 되었다.
 
-- 데모 환경에서 베트릭의 변화가 빠르게 반영될 것
+- 데모 환경에서 Metric의 변화가 빠르게 반영될 것
 - 과도한 `Scrape`로 인한 불필요한 부하를 피할것
 
 이는 운영 환경에서의 최적값을 의미하지 않으며, 실험 및 검증 목적에 적합한 기본값으로 선택되었다.
@@ -191,14 +191,14 @@ Prometheus는 기본 설정된 `scrape_interval` 값(`15s`)에 따라 API의 `/m
 
 ![api-metrics](images/rep2-api-metrics.png)
 
-API 서비스는 '/metrics` 엔드포인트를 통해 Prometheus 형식의 메트릭을 노출한다.
+API 서비스는 '/metrics` Endpoint를 통해 Prometheus 형식의 Metric을 노출한다.
 
 - 사용자가 직접 확인하는 URL
   - `http://localhost:8080/metric`
 - Prometheus가 실제로 scape 하는 대상
   - `http://api:8080/metrics`(Docker 네트워크 내부)
 
-이와 같이 외부 접근 경로와 내부 수집 경로를 분리하여, 컨테이너 환경에서도 안정적으로 메트릭을 수집할 수 있도록 구성하였다.
+이와 같이 외부 접근 경로와 내부 수집 경로를 분리하여, 컨테이너 환경에서도 안정적으로 Metric을 수집할 수 있도록 구성하였다.
 
 #### 2.2.1.3 prometheus 수집(scrape)
 
@@ -210,14 +210,14 @@ API 서비스의 `/metrics` Endpoiint를 주기적으로 수집하는 주체로 
 - Prometheus UI 접근 URL
   - `http://localhost:9090`
 
-이를 통해 Prometheus가 정상적으로 API 메트릭을 수집하고 있으며, 메트릭 데이터가 시계열 형태로 저장되고 있음을 확인할 수 있다.
+이를 통해 Prometheus가 정상적으로 API Metric을 수집하고 있으며, Metric 데이터가 시계열 형태로 저장되고 있음을 확인할 수 있다.
 
 #### 2.2.1.4 query at prometheus graph
 
 ![query](images/rep2-query.png)
 
-수집된 메트릭은 Proimetheus UI의 Graph 화면을 통해 직접 확인할 수 있다.
-본 프로젝트에서 주요하게 사용되는 메트릭은 다음과 같다.
+수집된 Metric은 Proimetheus UI의 Graph 화면을 통해 직접 확인할 수 있다.
+본 프로젝트에서 주요하게 사용되는 Metric은 다음과 같다.
 
 - `http_requests_total`
   - 타입: `Counter`
@@ -226,18 +226,18 @@ API 서비스의 `/metrics` Endpoiint를 주기적으로 수집하는 주체로 
   - 타입: `Histogram`
   - 의미: 요청 지연시간 분포
 
-`Counter`는 **메트릭은 트래픽 추이와 요청량 변화**를 파악하는 데 사용되며,
-`Histogram` 메트릭은 P95/ p99 지연시간 계산을 위한 기반 데이터로 사용된다.
+`Counter`는 **Metric은 트래픽(Traffic) 추이와 요청량(Request) 변화**를 파악하는 데 사용되며,
+`Histogram` Metric은 `P95`/ `p99` 지연(latency)시간 계산을 위한 기반 데이터로 사용된다.
 
-이 메트릭들은 이후 단계에서
+이 Metric들은 이후 단계에서
 **Availability, Latency, Error Rate SLI 정의 및 Alert Rule 설계**의 핵심 입력으로 활용된다.
 
 #### 2.2.2 Visualization: Grafana
 
 ![visualization](images/rep2-visualizationgrafana.png)
 
-Grafana는 메트릭을 **사람이 해석 가능한 형태로 시각화**하기 위한 도구로 사용된다.
-본 프로젝트에서는 Grafana UI에서 수동으로 Data source나 Dashboard를 생성하지 않고,
+Grafana는 Metric을 **사람이 해석 가능한 형태로 시각화(Visualize)**하기 위한 도구로 사용된다.
+본 프로젝트에서는 Grafana UI에서 수동으로 데이터 소스나 대시보드를 생성하지 않고,
 Provisioning(코드 기반 설정) 방식으로 자동 구성되도록 설계하였다.
 
 설계의 핵심 목표는 다음과 같다.
@@ -247,13 +247,13 @@ Provisioning(코드 기반 설정) 방식으로 자동 구성되도록 설계하
 - 장애 실험 및 재현 시 **동일한 기준선(Baseline) 유지
 
 이는 "한 번 잘 보이는 대시보드"가 아니라,
-**언제 실행해도 같ㅇㄴ 관측 결과를 얻을 수 있는 환경**을 만드는 데 목적이 있다.
+**언제 실행해도 같은 관측 결과를 얻을 수 있는 환경**을 만드는 데 목적이 있다.
 
 #### 2.2.2.1 Data source provisioning
 
 Grafana의 Prometheus Data source는 UID 기준으로 고정하여 정의하였다.
 
-- Data source UID: prometehus
+- 데이터 소스 UID: prometehus
 - Prometheus 접근 URL:
   - `http://prometheus:9090` (Docker 네트워크 내부)
 
@@ -265,13 +265,13 @@ Grafana의 Prometheus Data source는 UID 기준으로 고정하여 정의하였�
     url: http://prometheus:9090
   ```
 
-Grafana 대시보드는 내부적으로 Data source를 이름(name)이 아닌 UID 기준으로 참조한다. 
+Grafana 대시보드는 내부적으로 데이터 소스(Data source)를 이름(name)이 아닌 'UID' 기준으로 참조한다.
 
 따라서, UID를 고정하지 않으면 다음과 같은 문제가 발생할 수 있다.
 
 - Grafana 재기동 시 Data source 재생성
 - Dashboard에서 Data source 참조 오류 발생
-- 황경 재구성 시 시각화 깨짐
+- 환경 재구성 시 시각화(Visualize) 깨짐
 
 이를 방지하기 위해 Data source를 코드로 명시하고,
 UID를 고정하여 대시 보드 참조 안정성을 확보하였다.
@@ -330,7 +330,7 @@ UID를 고정하여 대시 보드 참조 안정성을 확보하였다.
     ```
 
     Traffic 패널은 API로 유입되는 요청량을
-    **초당 요청수 (Requests Per Second)** 기준으로 시각화한다.
+    **초당 요청수 (Requests Per Second)** 기준으로 시각화(Visualize)한다.
       - 서비스 부하 변화 감지
       - 트래픽 패턴 파악
       - 장애 전과 후 비교 기준
@@ -382,7 +382,7 @@ UID를 고정하여 대시 보드 참조 안정성을 확보하였다.
 
     평균 지연시간은 일부 니름 요청을 가릴 수 있으므로,
     본 프로젝트에서는 `Histogram` 기반 `p95 지연시간`을 사용하였다.
-      -  tail latency 관측
+      - tail latency 관측
       - 사용자 체감 성능 평가
       - Latency SLO 검증 기준
 
@@ -393,12 +393,13 @@ UID를 고정하여 대시 보드 참조 안정성을 확보하였다.
     위 구성을 통해 API 서비스의 트래픽, 오류, 지연시간을
     단일 Grafana 대시보드에서 통합적으로 관측할 수 있음을 확인하였다.
   
-    이는 Prometheus 기반 메트릭 수집과 Grafana 시각화가
+    이는 Prometheus 기반 Metric 수집과 Grafana 21₩8ㅑ(Visualize)가
     정상적으로 연동되었음을 의미하며,
     서비스 상태를 실시간으로 파악할 수 있는
-    `기본적인 Observability 환경`이 구축되었음을 보여준다.
-  
-    이 시각화 구성을 기반으로,
+    `
+    
+
+    이 시각화(Visualize) 구성을 기반으로,
     다음 단계에서는 `Prometheus Alert Rule`과 `Alertmanager`를 활용하여
     이상 상태를 자동으로 감지하고 대응하는 `Alerting` 흐름을 구성한다.
   
@@ -418,7 +419,7 @@ Alert는 사전에 정의한 SLI 후보 지표를 기준으로 설계되며,
 - Latency (p95)
 
 Grafana는 Alert를 생성하는 주체가 아니라,
-Alert 발생 전후의 지표 변화를 분석하고 해석하기 위한 시각화 도구로 활용된다.
+Alert 발생 전후의 지표 변화를 분석하고 해석하기 위한 시각화(Visualize) 도구로 활용된다.
 
 즉,
 
@@ -443,7 +444,7 @@ Alert의 **전송, 그룹화, 중복 제거**는 Alertmanager가 담당한다.
 
 본 Alerting 구조는 다음과 같은 흐름으로 구성된다.
 
-- Prometheus가 메트릭을 수집하고 Alert Rule을 평가
+- Prometheus가 Metric을 수집하고 Alert Rule을 평가
 - Alert 조건 충족 시 Alert 이벤트 생성
 - Alertmanager가 Alert를 수신
 - Alertmanager가 설정된 정책에 따라 Alert를 라우팅 및 전달
@@ -550,7 +551,7 @@ SLI는 *“무엇을 측정할 것인가”*에 대한 지표이며,
 SLO는 *“얼마나 잘해야 하는가”*에 대한 목표이다.
 
 ![slilodesign](/images/rep3-slislodesign.png)
-*Figure: 메트릭 → SLI/SLO → Error Budget → 운영 의사결정 간의 관계*
+*Figure: Metric → SLI/SLO → Error Budget → 운영 의사결정 간의 관계*
 
 #### 2.3.1 서비스 범위 및 정의 (Service Scope & Definition)
 
@@ -559,7 +560,7 @@ SLO는 *“얼마나 잘해야 하는가”*에 대한 목표이다.
 - **Users**: 내부 사용자 / 데모 사용자
 - **Critical User Journeys**
   - (UJ-1) 'GET /health'요청이 `200 OK`를 반환
-  - (UJ-2) 주요 API 엔드포인트가 허용 가능한 지연시간 내에 정상 응답
+  - (UJ-2) 주요 API Endpoint가 허용 가능한 지연시간 내에 정상 응답
 
 **범위에서 제외한 항목 (Out of scope)**
 
@@ -623,7 +624,7 @@ Success Rate = Good Requests / (Good Requests + Bad Requets)`
 
 **정의**
 
-Histogram 메트릭을 기반으로 계산한 HTTP 요청 지연시간의 95퍼센타일 값이다.
+Histogram Metric을 기반으로 계산한 HTTP 요청 지연시간의 95퍼센타일 값이다.
 
 - 일부 느린 요청을 포함한 tail latency를 반영
 - 사용자 체감 성능 평가에 적합
@@ -754,7 +755,7 @@ Error Budget은 서비스 운영 시 우선 순위를 결정하기 위한 기준
 
 본 장애는 API 서비의 `/error` Endpoint를 활용하여 **의도적으로 `HTTP 500` 응답을 일정 시간동안 반복 발생**시켜 의도적으로 오류 트래픽을 유지.
 
-- `/error` 엔드포인트 호출시 항상 `HTTP 500`을 반환하도록 설계됨
+- `/error` Endpoint 호출시 항상 `HTTP 500`을 반환하도록 설계됨
 
     ```bash
     curl -i http://localhost:8080/error
@@ -972,7 +973,7 @@ Alert 발생 이후, 즉각적인 조치에 앞서
 초기 대응 단계에서는 다음 항목을 중심으로 상황을 파악하였다.
 
 - Grafana Dashboard를 통해 Error Rate (5xx) 및 전체 요청 상태 확인
-- 장애가 단일 엔드포인트에 국한된 문제인지, 서비스 전반에 영향을 주는지 확인
+- 장애가 단일 Endpoint에 국한된 문제인지, 서비스 전반에 영향을 주는지 확인
 - 오류가 일시적인 스파이크인지, 지속적으로 발생하는지 여부 확인
 
 이 단계에서는 즉각적인 수정이나 재기동보다, **정확한 상황 인지를 우선**하여 불필요한 조치나 오판을 방지하는 데 중점을 두었다.
@@ -983,7 +984,7 @@ Alert 발생 이후, 즉각적인 조치에 앞서
 
 - 장애유도 로직 확인
 - 의도적 장애 주입 중단
-  - `/error` 엔드포인트 호출 중단
+  - `/error` Endpoint 호출 중단
   - 또는 API 서비스 재시작을 통한 정상 상태 복구
 
 조치는 서비스의 정상 동작을 회복시키는 데 필요한 **최소한의 범위로 제한하여** 수행하였다.
@@ -1059,7 +1060,7 @@ Alert 발생 이후, 즉각적인 조치에 앞서
 
 #### 2.5.1 장애 요약
 
-본 Incident는 API 서비스에서 HTTP `5xx` 오류가 지속적으로 발생한 상황을 **의도적으로 재현**한 실험이다.장애는 FastAPI 서비스의 `/error` 엔드포인트를 반복 호출함으로써 서버 측 오류 트래픽을 유지하는 방식으로 유도되었으며, 그 결과 **`Error Rate (5xx)` SLI가 급격히 상승**하였다.
+본 Incident는 API 서비스에서 HTTP `5xx` 오류가 지속적으로 발생한 상황을 **의도적으로 재현**한 실험이다.장애는 FastAPI 서비스의 `/error` Endpoint를 반복 호출함으로써 서버 측 오류 트래픽을 유지하는 방식으로 유도되었으며, 그 결과 **`Error Rate (5xx)` SLI가 급격히 상승**하였다.
 
 이로 인해 `Availability` 관점의 **`Success Rate`가 감소**했으며, 일부 구간에서는 **SLO 위반 또는 Error Budget 소모가 발생한 상태로 평가될 수 있는 상황**이 관측되었다.
 
@@ -1110,8 +1111,8 @@ Alert 감지까지의 지연은 Alert Rule에 정의된 'for' 조건에 따른 *
 #### 2.5.4 Root Cause
 
 - **직접 원인 (Direct Cause)**
-  - `/error` 엔드포인트가 항상 HTTP `500`을 반환하도록 설계됨
-  - 해당 엔드포인트에 대한 반복 호출로 인해 서버 오류 트래픽이 지속적으로 발생
+  - `/error` Endpoint가 항상 HTTP `500`을 반환하도록 설계됨
+  - 해당 Endpoint에 대한 반복 호출로 인해 서버 오류 트래픽이 지속적으로 발생
 
 - **근본 원인 (Root Cause)**
   - **Controlled Failure Injection** 시나리오에서,
@@ -1122,7 +1123,7 @@ Alert 감지까지의 지연은 Alert Rule에 정의된 'for' 조건에 따른 *
 #### 2.5.5 재발 방지 대책
 
 - **단기 개선**
-  - 장애 유도용 엔드포인트(`/error`)는 실험 환경에서만 활성화
+  - 장애 유도용 Endpoint(`/error`)는 실험 환경에서만 활성화
   - 실험 종료 후 즉시 비활성화 또는 접근 제한(예: 인증 적용/ IP allowlist)
   - Runbook에 “의도적 장애 주입 여부 확인” 단계 명시
 
