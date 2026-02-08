@@ -835,7 +835,7 @@ Alert Rule은 (`alert-rules.yml`)에 정의되어 있으며, API 서비스의 **
 - API 서버에서 `HTTP 5xx` 응답이 지속적으로 발생
 
   ```bash
-  docker compose -f --timestamps api
+  docker logs -f --timestamps api
   ```
 
   ![api500logs](/images/rep4-2422-api500logs.png)
