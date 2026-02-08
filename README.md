@@ -2,7 +2,7 @@
 
 본 프로젝트는 **SRE(Site Reliability Engineering) 관점에서** 다음의 핵심 주제를 실습하고 문서화하는 미니 프로젝트이다.
 
-- **서비스 신뢰성 측정**
+- **서비스 신뢰성 측정(Service Reliability Measurement)**
 - **관측 가능성(Observability) 구축**
 - **장애 유도 및 대응**
 - **RCA(Root Cause Analysis) 문서화**
@@ -11,7 +11,7 @@
 
 ## 전제 구조 (Total Structure)
 
-The following diagram shows the end-to-end data flow from API exposure to metrics scraping and visualization.
+아래 다이어그램은 API → Prometheus → Grafana로 이어지는 end-to-end 데이터 흐름을 나타낸다.
 
 ![structure](images/structure.png)
 
@@ -77,7 +77,7 @@ webhook        webhook        Up             0.0.0.0:9001→9001/tcp
 
 - 정상 응답
 - 의도적인 응답 지연(Latency)
-- 의도적인 서버 오류(HTTP `5xx`)
+- 의도적인 서버 오류(`HTTP 5xx`)
 
 #### 2.1.1 정상 응답
 
@@ -99,7 +99,7 @@ webhook        webhook        Up             0.0.0.0:9001→9001/tcp
 
     ![health](images/rep1-health.png)
 
-이 `Endpoint는 Availability 확인을 위한 기준성(Baseline) 역할을 아며, 서비스가 정상 상태임을 판단하는 최소 조건으로 사용된다.
+이 Endpoint는 Availability 확인을 위한 기준성(Baseline) 역할을 하며, 서비스가 정상 상태임을 판단하는 최소 조건으로 사용된다.
 
 #### 2.1.2 의도적인 응답 지연
 
@@ -114,7 +114,7 @@ webhook        webhook        Up             0.0.0.0:9001→9001/tcp
         return {"status": "ok", "delay_ms": ms}
     ```
 
-- 기대 결과: `HTTP 200`, total time ≈ `1s` 이상
+- 기대 결과: `HTTP 200`, `total time` ≈ `1s` 이상
 
     ```bash
     curl -s -w '\nstatus=%{http_code} total=%{time_total}s\n' 'http://localhost:8080/slow?ms=1000' -o /dev/null
@@ -350,7 +350,7 @@ Grafana 대시보드는 내부적으로 데이터 소스(Data source)를 이름(
         "gridPos": { "h": 8, "w": 24, "x": 0, "y": 8 }
     ```
 
-    Error Rate 패널은 **전체 요청 대비 HTTP 5xx 응답 비율**을 나타낸다.
+    Error Rate 패널은 **전체 요청 대비 `HTTP 5xx` 응답 비율**을 나타낸다.
       - 서버 오류는 사용자 경험에 직접적인 영향을 미침
       - Availability SLI 및 Error Budget과 직접 연결됨
       - 이후 Alerting 단계에서 핵심 판단 지표로 사용됨
@@ -431,14 +431,14 @@ Prometheus는 Alert Rule을 평가하여 Alert 이벤트를 생성하며, Alert�
 - Alertmanager가 Alert를 수신
 - Alertmanager가 설정된 정책에 따라 Alert를 라우팅 및 전달
 
-이 구조를 통해 Alert 판단 로직과 전달 로직을 분리하여 Alert 설계의 명확성과 확장성을 확보하였다.
+이 구조를 통해 Alert **판단 로직과 전달 로직을 분리**하여 Alert 설계의 명확성과 확장성을 확보하였다.
 
 #### 2.2.3.2 Alert Validation Summary
 
 Alerting 동작이 의도한 대로 수행되는지 검증하기 위해 다음 항목을 중심으로 검증을 수행하였다.
 
-- Prometheus가 alert-rules.yml에 정의된 규칙을 정상적으로 평가함
-- Alert 상태가 Inactive → Pending → Firing → Resolved로 전이됨
+- Prometheus가 `alert-rules.yml`에 정의된 규칙을 정상적으로 평가함
+- Alert 상태가 `Inactive` → `Pending` → `Firing` → `Resolved`로 전이됨
 - Alertmanager가 Alert를 정상적으로 수신하고 라우팅함
 - 로컬 webhook receiver를 통해 Alert 전달을 검증함
 - 외부 Slack, Email 등 외부 의존성 없이 전체 흐름을 재현함
@@ -461,21 +461,21 @@ Alerting 동작이 의도한 대로 수행되는지 검증하기 위해 다음 �
         이는 Alert Rule의 `for` 조건이 일시적인 스파이크가 아닌 지속적인 이상 상태만을 감지하도록 정상적으로 동작했음을 의미.
 
     - Routing/ Grouping
-        - Alertmanager 로그를 통해 `APIDown` Alert가 정상적으로 수신 되었으며, 설정된 'route' 및 'group_by'정책에 따라 집계(aggregation) 및 처리됨을 확인.
+        - Alertmanager 로그를 통해 `APIDown` Alert이 정상적으로 수신 되었으며, 설정된 'route' 및 'group_by'정책에 따라 집계(aggregation) 및 처리됨을 확인.
 
     - Delivery
         ![delivery](/images/rep2-delivery.png)
-        - Alertmanager 로그에서 `receiver=local-webhook`으로 Alert가 전송되었고 `Notify success` 로그를 확인
+        - Alertmanager 로그에서 `receiver=local-webhook`으로 Alert이 전송되었고 `Notify success` 로그를 확인
         - Webhook receiver 로그에서 Alert payload(JSON)를 수신
-        - HTTP 200 응답을 통해 전달 성공을 검증
+        - `HTTP 200` 응답을 통해 전달 성공을 검증
 
-      이를 통해 Alert가 실제 전달 단계까지 정상적으로 도달함을 확인하였다.
+      이를 통해 Alert이 실제 전달 단계까지 정상적으로 도달함을 확인하였다.
 
 1. **Validation Result**
 
     - Alert는 Inactive → Firing → Resolved 상태 전이를 의도한 조건에 따라 정확히 수행.
     - Alertmanager는 설정된 route 및 group_by 정책에 따라 Alert를 정상적으로 처리.
-    - Webhook receiver는 Alert payload를 정상적으로 수신하였으며, HTTP 200 응답을 통해 전달 성공을 확인.
+    - Webhook receiver는 Alert payload를 정상적으로 수신하였으며, `HTTP 200` 응답을 통해 전달 성공을 확인.
 
 1. **Reproducibility**
 
@@ -488,15 +488,25 @@ Alerting 동작이 의도한 대로 수행되는지 검증하기 위해 다음 �
 Alert validation 과정에서 다음과 같은 증적을 확보하였다.
 
 - **Alert 상태 전이**
-    Prometheus Alerts UI를 통해 `APIDown` Alert가 `Inactive → Pending → Firing` 상태로 전이 되는 것을 확인 하였다.
+    Prometheus Alerts UI를 통해 `APIDown` Alert이 `Inactive` → `Pending` → `Firing` 상태로 전이 되는 것을 확인 하였다.
 
 - **Alert 전달**
     1. Alertmanager log
+
+        ```bash
+          docker logs -f --timestamps alertmanager | grep -Ei 'dispatch|notify|webhook|receiver|route|group'
+        ```
+
         ![alertmanagerlog](/images/rep2-alertmanager-logs.png)
-    2. Webhook Log
+    1. Webhook Log
+
+        ```bash
+        docker logs --tail 10 webhook
+        ```
+
         ![webhooklog](/images/rep2-webhook-log.png)
         - Alertmanager가 local-webhook receiver로 APIDown Alert를 POST 방식으로 전달하였다.
-    3. Alert payload JSON(excerpt)
+    1. Alert payload JSON(excerpt)
         Alertmanager가 webhook receiver로 전달한 Alert payload(JSON)
 
         ```json
@@ -513,8 +523,8 @@ Alert validation 과정에서 다음과 같은 증적을 확보하였다.
 
 Alert 설계 및 검증 과정에서 다음과 같은 점을 확인하였다.
 
-- `for` 값은 Alert 반응 속도와 noise 간의 명확한 trade-off가 존재함
-- p95 latency 기준값은 초기 가설로 설정되었으며, 실제 트래픽 패턴에 따라 재조정이 필요함
+- `for` 값은 Alert 반응 속도와 **불필요한 경보(noise)** 간의 명확한 trade-off가 존재함
+- `p95 latency` 기준값은 초기 가설로 설정되었으며, 실제 트래픽 패턴에 따라 재조정이 필요함
 - 단일 지표 기반 Alert는 noise를 유발할 수 있음
 
 이에 따라 향후 개선 방향은 다음과 같다.
@@ -566,7 +576,7 @@ SLO는 *“얼마나 잘해야 하는가”*에 대한 목표이다.
 
 - **Availability (Success Rate)**
 - **Latency (p95)**
-- **Error Rate (HTTP 5xx)**
+- **Error Rate (`HTTP 5xx`)**
 
 #### 2.3.3 SLI Definitions
 
@@ -584,7 +594,7 @@ SLO는 *“얼마나 잘해야 하는가”*에 대한 목표이다.
 **수식**
 
 ```java
-Success Rate = Good Requests / (Good Requests + Bad Requets)`
+Success Rate = Good Requests / (Good Requests + Bad Requets)
 ```
 
 **PromQL**
@@ -605,7 +615,7 @@ Success Rate = Good Requests / (Good Requests + Bad Requets)`
 
 **정의**
 
-Histogram Metric을 기반으로 계산한 HTTP 요청 지연시간의 95퍼센타일 값이다.
+Histogram Metric을 기반으로 계산한 HTTP 요청 latency 시간의 95퍼센타일 값이다.
 
 - 일부 느린 요청을 포함한 tail latency를 반영
 - 사용자 체감 성능 평가에 적합
@@ -616,7 +626,7 @@ Histogram Metric을 기반으로 계산한 HTTP 요청 지연시간의 95퍼센�
   histogram_quantile(
     0.95,
     sum by (le) (
-      rate(http_request_duration_seconds_bucket(job="fastapi"}[5m]))
+      rate(http_request_duration_seconds_bucket(job="fastapi"[5m]))
     )
 )
 ```
@@ -625,7 +635,7 @@ Histogram Metric을 기반으로 계산한 HTTP 요청 지연시간의 95퍼센�
 
 **정의**
 
-전체 요청 중 서버 측 오류(HTTP 5xx)가 차지하는 비율이다.
+전체 요청 중 서버 측 오류(`HTTP 5xx`)가 차지하는 비율이다.
 
 - 서버 처리 실패를 직접적으로 반영
 - Availability SLI를 보완하는 지표
@@ -665,9 +675,9 @@ Error Rate = 5xx Requests / Total Requests
 
 | SLO ID | SLI           | Good Event           | Bad Event   | Target  | Window |
 |--------|---------------|----------------------|-------------|---------|--------|
-| SLO-1  | Success Rate  | HTTP 2xx, 3xx        | HTTP 5xx    | ≥ 99.9% | 30d    |
+| SLO-1  | Success Rate  | `HTTP 2xx, 3xx`      | `HTTP 5xx`  | ≥ 99.9% | 30d    |
 | SLO-2  | Latency (p95) | Request ≤ 300ms      | N/A         | ≤ 300ms | 30d    |
-| SLO-3  | Error Rate    | HTTP non-5xx         | HTTP 5xx    | ≤ 0.1%  | 30d    |
+| SLO-3  | Error Rate    | HTTP non-5xx         | `HTTP 5xx`  | ≤ 0.1%  | 30d    |
 
 #### 2.3.6 Error Budget
 
@@ -685,7 +695,7 @@ Error Budget은 정의된 **SLO를 기준으로 허용 가능한 실패 범위**
 
 즉, SLO 평가 기간 동안 전체 요청 중 최대 0.1%까지의 HTTP `5xx` 오류는 Availability SLO 위반으로 간주되지 않는다.
 
-#### **운영 관점에서의 해석**
+#### 2.3.6.1 **운영 관점에서의 해석**
 
 Error Budget은 서비스 운영 시 우선 순위를 결정하기 위한 기준으로 활용된다.
 
@@ -694,13 +704,13 @@ Error Budget은 서비스 운영 시 우선 순위를 결정하기 위한 기준
 
 본 문서에서는 Error Budget을 설계 수준에서 정의하여, `SLO` 기반 `Alerting` 및 향후 운영 정책으로 확장할 수 있는 기초 기준을 마련하는 데 목적이 있다.
 
-### 2.4. 장애 시나리오 및 Incident Response
+### 2.4. 장애 시나리오 및 장애 대응 (Incident Response)
 
 ---
 
 이 섹션에서는 서비스 운영 중 발생할 수 있는 장애를 **의도적으로 재현**하고, 장애 감지부터 복구 및 학습까지의 **Incident Response 흐름**을 **SRE 관점**에서 정리한다. 본 목적은 장애 자체가 아니라, 장애를 어떻게 인지하고 관리했는지를 보여주는 데 있다.
 
-#### 2.4.1 장애 시나리오 개요 (Incident Scenario Overview)
+#### 2.4.1 Incident Scenario Overview
 
 #### **2.4.1.1 목적**
 
@@ -730,7 +740,7 @@ Error Budget은 서비스 운영 시 우선 순위를 결정하기 위한 기준
 
 > 시스템 복잡도를 최소화하기 위해 본 실험에서는 **단일 장애 시나리오**만을 대상으로 한다.
 
-#### 2.4.2 장애유도 (Failure Injection)
+#### 2.4.2 Failure Injection
 
 #### **2.4.2.1 장애 유도 방식**
 
@@ -779,15 +789,15 @@ Error Budget은 서비스 운영 시 우선 순위를 결정하기 위한 기준
 
 본 장애 유도를 통해 다음과 같은 효과를 기대할 수 있다.
 
-- HTTP 5xx 응답 증가로 `Error Rate (5xx) SLI`상승
+- `HTTP 5xx` 응답 증가로 `Error Rate (5xx) SLI`상승
 - Success Rate 감소로 `Availability SLO`에 영향 발생
 - Error Rate 기반 `Prometheus Alert Rule` 트리거
 
-이를 통해 Alert가 단순한 임계치 초과가 아니라, **SLO 보호 목적에 따라 정상적으로 동작하는지**를 검증할 수 있다.
+이를 통해 Alert이 단순한 임계치 초과가 아니라, **SLO 보호 목적에 따라 정상적으로 동작하는지**를 검증할 수 있다.
 
 > 본 장애는 실험 목적에 한해 **의도적으로 주입된 장애**이며, 동일한 환경에서는 누구나 재현 가능하도록 설계되었다.
 
-#### 2.4.3 장애 감지 (Detection)
+#### 2.4.3 Detection
 
 #### **2.4.3.1 감지 수단**
 
@@ -864,27 +874,27 @@ Alert Rule은 (`alert-rules.yml`)에 정의되어 있으며, API 서비스의 **
 
     Alert의 상태는 다음 순서로 전이 되었다.
 
-  > Inactive → Pending → Firing
+  > `Inactive` → `Pending` → `Firing`
 
     HighErrorRate Alert는 Prometheus Alerts API를 통해 평가되었다.
-    캡처된 출력에서 확인할 수 있듯이, Error Rate(5xx)가 정의된 임계치(5%)를 초과한 이후 해당 상태가 설정된 기간(for: 2m) 동안 지속되면서 Alert가 Firing 상태로 전환되었다.
+    캡처된 출력에서 확인할 수 있듯이, Error Rate(5xx)가 정의된 임계치(5%)를 초과한 이후 해당 상태가 설정된 기간(`for: 2m`) 동안 지속되면서 Alert이 Firing 상태로 전환되었다.
     또한 activeAt 타임스탬프를 통해, 조건이 Alert를 트리거하기에 충분한 시간 동안 유지되었음을 확인할 수 있다.
 
-    이는 일시적인 오류가 아닌, 지속적인 **`SLI 위한 상황**임을 확인하기 위한 'for'조건이 정상적으로 적용되었음을 의미한다.
+    이는 일시적인 오류가 아닌, 지속적인 **SLI 위한 상황**임을 확인하기 위한 `for`조건이 정상적으로 적용되었음을 의미한다.
 
 #### **2.4.3.3 감지 시간**
 
-장애 발생 시점 기준 약 **N분후** Alert가 `Firing` 상태로 전이되었다.
+장애 발생 시점 기준 약 **N분후** Alert이 `Firing` 상태로 전이되었다.
   ![statetransition](/images/rep4-2433-statetransition.png)
   
-이 감지 지연은 Alert Rule에 정의된 'for' 조건에 따른 정상적인 동작으로 판단 된다.
+이 감지 latency는 Alert Rule에 정의된 `for` 조건에 따른 정상적인 동작으로 판단 된다.
 
 `HigherrorRate` Alert는 Error Rate(5xx)가 임계치를 초과한 시점부터 즉시 `Firing`되지 않는다.
 우선, `Pending` 상태로 유지되며, 해당 조건이 **2분 이상 지속되는지**를 평가한 이후에 `Firing` 상태로 전환된다.
   ![normaloperation](/images/rep4-2433-normaloperation.png)
-  위 Alert rule 정의에서 확인할 수 있듯이, HighErrorRate Alert에는 'for: 2m' 조건이 명시되어 있으며, 이는 임계치 초과 상태가 일정 시간 이상 지속되는 경우에만 Alert를 firing하도록 설계된 조건이다.
+  위 Alert rule 정의에서 확인할 수 있듯이, `HighErrorRate` Alert에는 `for: 2m` 조건이 명시되어 있으며, 이는 임계치 초과 상태가 일정 시간 이상 지속되는 경우에만 Alert를 `firing`하도록 설계된 조건이다.
 
-이러한 감지 지연은 다음과 같은 설계 의도를 반영한 결과이다.
+이러한 감지 latency는 다음과 같은 설계 의도를 반영한 결과이다.
 
 - 일시적인 오류로 인한 **Alert noise** 최소화
 - 지속적인 오류만을 **신뢰성 위반**으로 판단
@@ -892,7 +902,7 @@ Alert Rule은 (`alert-rules.yml`)에 정의되어 있으며, API 서비스의 **
 
 > 본 Alert는 단순히 특정 임계값을 초과했기 떄문에 발생한 것이 아니라, **Availability SLO를 보호**하기 위해 **Error Rate SLI**를 기준으로 설계된 **Alert**이다.
 
-#### 2.4.4 영향 분석 (Impact Analysis)
+#### 2.4.4 Impact Analysis
 
 #### 2.4.4.1 사용자 영향
 
@@ -918,8 +928,10 @@ Alert Rule은 (`alert-rules.yml`)에 정의되어 있으며, API 서비스의 **
 
 #### 2.4.4.2 SLO 영향
 
-본 장애는 사전에 정의한 SLO 중 **Availability SLO** 및 **Error Rate SLI**에 영향을 미쳤다.
-(참고: [2.3 SLI/SLO 설계](#23-slislo-설계))
+본 장애는 사전에 정의한 SLO 중 **Availability SLO** 및 **Error Rate SLI**에 영향을 미쳤다. (참고: [2.3 SLI/SLO 설계](#23-slislo-설계))
+
+보다 정제된 설계된 문서는
+[`SLI_SLO_Design.pdf](/docs/sli_slo_design.pdf)에서 확인 할 수 있다.
 
 ![grafana](/images/rep4-2443-grafanaerrorrate.png)
 
@@ -942,7 +954,7 @@ Alert Rule은 (`alert-rules.yml`)에 정의되어 있으며, API 서비스의 **
 
 본 장애는 사용자 경험에 직접적인 영향을 주는 **신뢰성 관점의 장애(Reliability-impacting incident)**로 분류 된다.
 
-#### 2.4.5 대응 (Response)
+#### 2.4.5 Response
 
 #### 2.4.5.1 초기 대응
 
@@ -984,7 +996,7 @@ Alert 발생 이후, 즉각적인 조치에 앞서
 
 본 대응 과정은 문제 해결과 학습을 목적으로 하며, 책임 추궁이 아닌 **시스템 개선 관점에서 수행**되었다.
 
-#### 2.4.6 복구 (Recovery)
+#### 2.4.6 Recovery
 
 #### 2.4.6.1 복구 시점
 
@@ -1011,10 +1023,11 @@ Alert 발생 이후, 즉각적인 조치에 앞서
 #### 2.4.7.1 잘 된 점
 
 - **Error Rate** 기반 **Alert**가 Availability SLO 위반 징후를 조기에 감지함
-- 장애 발생 → 감지 → 대응 → 복구까지의 **Incident Response 흐름이 명확하게 검증됨**
+- 장애 발생 → 감지 → 대응 → 복구까지의 **Incident Response(장애 대응) 흐름이 명확하게 검증됨**
+  (Failure → Detection → Response → Recovery)
 - 장애 영향 및 복구 여부를 **SLI/SLO를 기준으로 일관되게 판단**할 수 있었음
 
-본 실험을 통해 Alert가 단순한 알림이 아니라, **서비스 신뢰성을 보호하기 위한 운영 도구**로 기능함을 확인.
+본 실험을 통해 Alert이 단순한 알림이 아니라, **서비스 신뢰성을 보호하기 위한 운영 도구**로 기능함을 확인.
 
 #### 2.4.7.2 개선 할 점
 
@@ -1028,7 +1041,7 @@ Alert 발생 이후, 즉각적인 조치에 앞서
 
 #### 2.4.7.3 향후 계획
 
-- **Latency(p95)** 기반 장애 시나리오를 추가하여 응답 지연이 사용자 경험에 미치는 영향을 추가적으로 검증
+- **Latency(p95)** 기반 장애 시나리오를 추가하여 응답 latency가 사용자 경험에 미치는 영향을 추가적으로 검증
 - Incident Response 과정에서 반복적으로 수행되는 절차를 **Runbook 형태로 문서화** 및 확장
 
 이를 통해 단일 장애 대응을 넘어, **지속 가능한 신뢰성 운영 체계로 확장**하는 것을 목표로 한다.
@@ -1078,14 +1091,14 @@ Alert 발생 이후, 즉각적인 조치에 앞서
 | 장애 발생 | `/error` endpoint 반복 호출을 통해 HTTP 500 응답 지속 발생 |
 | 지표 변화 | `Error Rate (5xx)` SLI 상승, `Success Rate` 감소 |
 | 감지 | Prometheus가 `5분` 슬라이딩 윈도우 기준으로 Error Rate SLI 평가 |
-| Pending | 임계치 초과 상태가 지속되며 Alert가 `Pending` 상태로 전이 |
+| Pending | 임계치 초과 상태가 지속되며 Alert이 `Pending` 상태로 전이 |
 | Firing | `for: 2m` 조건 충족 후 `HighErrorRate`가 `Firing` 상태로 전이 |
 | 대응 | Grafana 대시보드 및 로그를 통해 장애 범위 확인 |
 | 조치 | 장애 유도 중단 (`/error` 호출 중지 또는 API 재시작) |
 | 복구 | Error Rate 정상화, Alert 상태가 `Resolved`로 전이 |
 
-Alert 감지까지의 지연은 Alert Rule에 정의된 'for' 조건에 따른 **의도된 동작**이다.
-이는 일시적인 오류로 인한 불필요한 Alert를 줄이고(Noise 감소), **Availability SLO 보호를 위한 신뢰성 신호만 경고**하기 위한 설계다.
+Alert 감지까지의 latency는 Alert Rule에 정의된 'for' 조건에 따른 **의도된 동작**이다.
+이는 일시적인 오류로 인한 불필요한 Alert를 줄이고(noise 감소), **Availability SLO 보호를 위한 신뢰성 신호만 경고**하기 위한 설계다.
 
 #### 2.5.4 Root Cause
 
