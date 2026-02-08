@@ -65,7 +65,7 @@ webhook        webhook        Up             0.0.0.0:9001→9001/tcp
 - **Prometheus UI**: [http://localhost:9090](http://localhost:9090)
 - **Alertmanager UI**: [http://localhost:9093](http://localhost:9093)
 
-이 단계에서 모든 Endpoint가 정상적으로 접근 가능해야 하며, 이후 Obervability 구성 및 Alert 검증 단계를 진행 할 수 있다.
+이 단계에서 모든 Endpoint가 정상적으로 접근 가능해야 하며, 이후 **Observability** 구성 및 **알림(Alert)** 검증 단계를 진행 할 수 있다.
 
 ## 2. 요구사항
 
@@ -91,7 +91,7 @@ webhook        webhook        Up             0.0.0.0:9001→9001/tcp
         return {"status": "ok"}
     ```
 
-- 기대 결과: HTTP `200` + JSON body
+- 기대 결과: `HTTP 200` + JSON body
 
     ```bash
     curl -i http://localhost:8080/health
@@ -114,7 +114,7 @@ webhook        webhook        Up             0.0.0.0:9001→9001/tcp
         return {"status": "ok", "delay_ms": ms}
     ```
 
-- 기대 결과: HTTP `200`, total time ≈ `1s` 이상
+- 기대 결과: `HTTP 200`, total time ≈ `1s` 이상
 
     ```bash
     curl -s -w '\nstatus=%{http_code} total=%{time_total}s\n' 'http://localhost:8080/slow?ms=1000' -o /dev/null
@@ -138,7 +138,7 @@ webhook        webhook        Up             0.0.0.0:9001→9001/tcp
         raise HTTPException(status_code=code, detail=f"intentional {code} error")
     ```
 
-- 기대 결과: HTTP `500` (의도적 오류l)
+- 기대 결과: `HTTP 500` (의도적 오류)
 
     ```bash
     curl -i http://localhost:8080/error
@@ -158,7 +158,7 @@ API의 전체 구현은 다음 파일에서 확인 할 수 있다.
 
 ---
 
-본 프로젝트는 **Metrics 기반 관측 가능성(Observability)**을 목표로 하며, 아래 구성으로 `수집(Collect) → 시각화(Visualize) → 알림(Alert)` 흐름을 단계적으로 구성한다.
+본 프로젝트는 **Metrics 기반 Observability**을 목표로 하며, 아래 구성으로 `수집(Collect) → 시각화(Visualize) → 알림(Alert)` 흐름을 단계적으로 구성한다.
 
 #### 2.2.1 Metrics: Prometheus
 
@@ -195,7 +195,7 @@ API 서비스는 '/metrics` Endpoint를 통해 Prometheus 형식의 Metric을 �
 
 - 사용자가 직접 확인하는 URL
   - `http://localhost:8080/metric`
-- Prometheus가 실제로 scape 하는 대상
+- Prometheus가 실제로 `Scape` 하는 대상
   - `http://api:8080/metrics`(Docker 네트워크 내부)
 
 이와 같이 외부 접근 경로와 내부 수집 경로를 분리하여, 컨테이너 환경에서도 안정적으로 Metric을 수집할 수 있도록 구성하였다.
@@ -237,8 +237,7 @@ API 서비스의 `/metrics` Endpoiint를 주기적으로 수집하는 주체로 
 ![visualization](images/rep2-visualizationgrafana.png)
 
 Grafana는 Metric을 **사람이 해석 가능한 형태로 시각화(Visualize)**하기 위한 도구로 사용된다.
-본 프로젝트에서는 Grafana UI에서 수동으로 데이터 소스나 대시보드를 생성하지 않고,
-Provisioning(코드 기반 설정) 방식으로 자동 구성되도록 설계하였다.
+본 프로젝트에서는 Grafana UI에서 수동으로 데이터 소스나 대시보드를 생성하지 않고, Provisioning(코드 기반 설정) 방식으로 자동 구성되도록 설계하였다.
 
 설계의 핵심 목표는 다음과 같다.
 
@@ -246,8 +245,7 @@ Provisioning(코드 기반 설정) 방식으로 자동 구성되도록 설계하
 - 환경 차이로 인한 대시보드 편차 제거
 - 장애 실험 및 재현 시 **동일한 기준선(Baseline) 유지
 
-이는 "한 번 잘 보이는 대시보드"가 아니라,
-**언제 실행해도 같은 관측 결과를 얻을 수 있는 환경**을 만드는 데 목적이 있다.
+이는 "한 번 잘 보이는 대시보드"가 아니라, **언제 실행해도 같은 관측 결과를 얻을 수 있는 환경**을 만드는 데 목적이 있다.
 
 #### 2.2.2.1 Data source provisioning
 
@@ -273,8 +271,8 @@ Grafana 대시보드는 내부적으로 데이터 소스(Data source)를 이름(
 - Dashboard에서 Data source 참조 오류 발생
 - 환경 재구성 시 시각화(Visualize) 깨짐
 
-이를 방지하기 위해 Data source를 코드로 명시하고,
-UID를 고정하여 대시 보드 참조 안정성을 확보하였다.
+이를 방지하기 위해 Data source를 코드로 명시하고, UID를 고정하여 대시 보드 참조 안정성을 확보하였다.
+
 > 이 설정을 통해 Grafana 환경은 **상태가 아닌 선언적 구성**으로 관리 된다.
 
 전체 설정 파일은 다음 경로에서 확인할 수 있다.
@@ -308,8 +306,7 @@ UID를 고정하여 대시 보드 참조 안정성을 확보하였다.
 
 #### 2.2.2.3 Dashboard panel configuration
 
-기본 대시보드에는 서비스 신뢰성을 관측하기 위한
-**세 가지 핵심 패널**로 구성된다.
+기본 대시보드에는 서비스 신뢰성을 관측하기 위한 **세 가지 핵심 패널**로 구성된다.
 
 1. **Traffic (RPS)**
 
@@ -329,12 +326,10 @@ UID를 고정하여 대시 보드 참조 안정성을 확보하였다.
       "gridPos": { "h": 8, "w": 24, "x": 0, "y": 16 }
     ```
 
-    Traffic 패널은 API로 유입되는 요청량을
-    **초당 요청수 (Requests Per Second)** 기준으로 시각화(Visualize)한다.
+    Traffic 패널은 API로 유입되는 요청량을 **초당 요청수 (Requests Per Second)** 기준으로 시각화(Visualize)한다.
       - 서비스 부하 변화 감지
       - 트래픽 패턴 파악
       - 장애 전과 후 비교 기준
-
     Traffic은 **Google SRE에서 정의한 Golden Signals 중 하나**로, 시스템 부하 변화의 1차 지표로 활용된다.
 
 1. **Error Rate (5xx)**
@@ -359,8 +354,7 @@ UID를 고정하여 대시 보드 참조 안정성을 확보하였다.
       - 서버 오류는 사용자 경험에 직접적인 영향을 미침
       - Availability SLI 및 Error Budget과 직접 연결됨
       - 이후 Alerting 단계에서 핵심 판단 지표로 사용됨
-    정상 상태에서는 값이 `0`에 수렵하며,
-    장애 발생 시 즉각적인 이상 징후를 확인할 수 있다.
+    정상 상태에서는 값이 `0`에 수렵하며, 장애 발생 시 즉각적인 이상 징후를 확인할 수 있다.
 
 1. **Latency (p95)**
   
@@ -380,46 +374,35 @@ UID를 고정하여 대시 보드 참조 안정성을 확보하였다.
         "gridPos": { "h": 8, "w": 24, "x": 0, "y": 0 }
     ```
 
-    평균 지연시간은 일부 니름 요청을 가릴 수 있으므로,
-    본 프로젝트에서는 `Histogram` 기반 `p95 지연시간`을 사용하였다.
+    평균 지연시간은 일부 니름 요청을 가릴 수 있으므로, 본 프로젝트에서는 `Histogram` 기반 `p95 지연시간`을 사용하였다.
       - tail latency 관측
       - 사용자 체감 성능 평가
       - Latency SLO 검증 기준
 
-1. **기각화 결과 요약**
+1. **시각화 결과 요약**
 
     ![grafanadashboard](/images/rep2-grafanadashboard.png)
 
-    위 구성을 통해 API 서비스의 트래픽, 오류, 지연시간을
-    단일 Grafana 대시보드에서 통합적으로 관측할 수 있음을 확인하였다.
+    위 구성을 통해 API 서비스의 트래픽, 오류, 지연시간을 단일 Grafana 대시보드에서 통합적으로 관측할 수 있음을 확인하였다.
   
-    이는 Prometheus 기반 Metric 수집과 Grafana 21₩8ㅑ(Visualize)가
-    정상적으로 연동되었음을 의미하며,
-    서비스 상태를 실시간으로 파악할 수 있는
-    `
-    
+    이는 Prometheus 기반 Metric 수집과 Grafana 시각화(Visualize)가 정상적으로 연동되었음을 의미하며, 서비스 상태를 실시간으로 파악할 수 있는 `기본적인 Observability 환경`이 구축되었음을 보여준다.
 
-    이 시각화(Visualize) 구성을 기반으로,
-    다음 단계에서는 `Prometheus Alert Rule`과 `Alertmanager`를 활용하여
-    이상 상태를 자동으로 감지하고 대응하는 `Alerting` 흐름을 구성한다.
+    이 시각화(Visualize) 구성을 기반으로, 다음 단계에서는 `Prometheus Alert Rule`과 `Alertmanager`를 활용하여 이상 상태를 자동으로 감지하고 대응하는 `Alerting` 흐름을 구성한다.
   
     전체 대시보드 정의는 다음 파일에서 확인할 수 있다.
       - [grafana/provisioning/dashboards/sre-dashboard.json](grafana/provisioning/dashboards/sre-dashboard.json)
 
 #### 2.2.3 알림 (Alerting): Prometheus Alert Rule 또는 Grafana Alert
 
-본 프로젝트에서는 서비스 신뢰성 위반을 감지하기 위한 Alerting 메커니즘으로
-Prometheus Alert Rule을 사용한다.
+본 프로젝트에서는 서비스 신뢰성 위반을 감지하기 위한 Alerting 메커니즘으로 Prometheus Alert Rule을 사용한다.
 
-Alert는 사전에 정의한 SLI 후보 지표를 기준으로 설계되며,
-각 지표는 서비스의 신뢰성 상태를 판단하는 명확한 신호(signal) 역할을 한다.
+Alert는 사전에 정의한 SLI 후보 지표를 기준으로 설계되며, 각 지표는 서비스의 신뢰성 상태를 판단하는 명확한 신호(Signal) 역할을 한다.
 
 - Availability
-- Error Rate (HTTP 5xx)
-- Latency (p95)
+- Error Rate (`HTTP 5xx`)
+- Latency (`p95`)
 
-Grafana는 Alert를 생성하는 주체가 아니라,
-Alert 발생 전후의 지표 변화를 분석하고 해석하기 위한 시각화(Visualize) 도구로 활용된다.
+Grafana는 Alert를 생성하는 주체가 아니라, Alert 발생 전후의 지표 변화를 분석하고 해석하기 위한 시각화(Visualize) 도구로 활용된다.
 
 즉,
 
@@ -435,8 +418,7 @@ Alert 발생 전후의 지표 변화를 분석하고 해석하기 위한 시각�
   - **High Latency (p95)**
     - 응답 지연 증가 감지
 
-Prometheus는 Alert Rule을 평가하여 Alert 이벤트를 생성하며,
-Alert의 **전송, 그룹화, 중복 제거**는 Alertmanager가 담당한다.
+Prometheus는 Alert Rule을 평가하여 Alert 이벤트를 생성하며, Alert의 **전송, 그룹화, 중복 제거**는 Alertmanager가 담당한다.
 
 #### 2.2.3.1 Alerting Architecture
 
@@ -449,8 +431,7 @@ Alert의 **전송, 그룹화, 중복 제거**는 Alertmanager가 담당한다.
 - Alertmanager가 Alert를 수신
 - Alertmanager가 설정된 정책에 따라 Alert를 라우팅 및 전달
 
-이 구조를 통해 Alert 판단 로직과 전달 로직을 분리하여
-Alert 설계의 명확성과 확장성을 확보하였다.
+이 구조를 통해 Alert 판단 로직과 전달 로직을 분리하여 Alert 설계의 명확성과 확장성을 확보하였다.
 
 #### 2.2.3.2 Alert Validation Summary
 
@@ -498,7 +479,7 @@ Alerting 동작이 의도한 대로 수행되는지 검증하기 위해 다음 �
 
 1. **Reproducibility**
 
-    본  Alert 검증 환경은 외부 Slack, Email 등의 알림 채널에 즤존하지 않고 Local webhook receiver를 사용하여 구성하였다.
+    본  Alert 검증 환경은 외부 Slack, Email 등의 알림 채널에 의존하지 않고 Local webhook receiver를 사용하여 구성하였다.
 
     Alert rule, Alertmanager 설정, webhook receiver는 docker-compose 기반으로 정의 되어 있으며, 동일한 환경을 구성할 경우 누구나 동일한 Alert 검증 과정을 재현할 수 있다.
 
@@ -811,7 +792,7 @@ Error Budget은 서비스 운영 시 우선 순위를 결정하기 위한 기준
 #### **2.4.3.1 감지 수단**
 
 본 장애는 `Prometheus Alert Rule`을 통해 감지되었다.
-Alert Rule은 (`alert-rules.yml`)에 정의되어 있으며, API 서비스의 **Error Rate (HTTP 5xx)**를 기준으로 이상 상태를 판단한다.
+Alert Rule은 (`alert-rules.yml`)에 정의되어 있으며, API 서비스의 **Error Rate (HTTP `5xx`)**를 기준으로 이상 상태를 판단한다.
 
 - **Alerting system**: `Prometheus` Alert Rule
 
@@ -835,7 +816,7 @@ Alert Rule은 (`alert-rules.yml`)에 정의되어 있으며, API 서비스의 **
 
   ![alertnamehigherrorrate](/images/rep4-2422-alertnamehigherrorrate.png)
 
-  해당 Alert는 API 서비스의 Error Rate (`HTTP 5xx`)를 지속적으로 관측하며, 사전에 정의한 **SLI/SLO 기준을 벗어나는 경우 Incident를 감지**하도록 설계되었다.
+  해당 Alert는 API 서비스의 Error Rate (HTTP `5xx`)를 지속적으로 관측하며, 사전에 정의한 **SLI/SLO 기준을 벗어나는 경우 Incident를 감지**하도록 설계되었다.
 
 #### **2.4.3.2 감지 과정**
 
@@ -886,10 +867,8 @@ Alert Rule은 (`alert-rules.yml`)에 정의되어 있으며, API 서비스의 **
   > Inactive → Pending → Firing
 
     HighErrorRate Alert는 Prometheus Alerts API를 통해 평가되었다.
-    캡처된 출력에서 확인할 수 있듯이, Error Rate(5xx)가 정의된 임계치(5%)를 초과한 이후
-    해당 상태가 설정된 기간(for: 2m) 동안 지속되면서 Alert가 Firing 상태로 전환되었다.
-    또한 activeAt 타임스탬프를 통해, 조건이 Alert를 트리거하기에 충분한 시간 동안
-    유지되었음을 확인할 수 있다.
+    캡처된 출력에서 확인할 수 있듯이, Error Rate(5xx)가 정의된 임계치(5%)를 초과한 이후 해당 상태가 설정된 기간(for: 2m) 동안 지속되면서 Alert가 Firing 상태로 전환되었다.
+    또한 activeAt 타임스탬프를 통해, 조건이 Alert를 트리거하기에 충분한 시간 동안 유지되었음을 확인할 수 있다.
 
     이는 일시적인 오류가 아닌, 지속적인 **`SLI 위한 상황**임을 확인하기 위한 'for'조건이 정상적으로 적용되었음을 의미한다.
 
@@ -959,7 +938,7 @@ Alert Rule은 (`alert-rules.yml`)에 정의되어 있으며, API 서비스의 **
 
 종합적으로, 본 장애는 시전에 정의한 **Availability SLI및 Error Rate SLI 모두에 영향을 미친 장애**이다. 장애 구간 동안 `HTTP 5xx` 응답이 지속적으로 발생함에 따라 성공 요청 비율이 감소하였고, 이는 Availability SLO 위반 또는 위반에 근접한 상태로 평가될 수 있다.
 
-또한 Error Rate 증가로 인해 `Error Budget이 일부 소모`되었으며, 이는 단일 장애 이벤트 자체보다는 **SLO 평가 기간(Rolling window) 내에서의 누적 신뢰성 지표 관점**에서 판단 되었다.
+또한 Error Rate 증가로 인해 **Error Budget이 일부 소모**되었으며, 이는 단일 장애 이벤트 자체보다는 **SLO 평가 기간(Rolling window) 내에서의 누적 신뢰성 지표 관점**에서 판단 되었다.
 
 본 장애는 사용자 경험에 직접적인 영향을 주는 **신뢰성 관점의 장애(Reliability-impacting incident)**로 분류 된다.
 
@@ -972,7 +951,7 @@ Alert 발생 이후, 즉각적인 조치에 앞서
 
 초기 대응 단계에서는 다음 항목을 중심으로 상황을 파악하였다.
 
-- Grafana Dashboard를 통해 Error Rate (5xx) 및 전체 요청 상태 확인
+- Grafana 대시보드를 통해 Error Rate (5xx) 및 전체 요청 상태 확인
 - 장애가 단일 Endpoint에 국한된 문제인지, 서비스 전반에 영향을 주는지 확인
 - 오류가 일시적인 스파이크인지, 지속적으로 발생하는지 여부 확인
 
