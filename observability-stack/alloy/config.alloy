@@ -1,0 +1,59 @@
+// Discover Docker containers running in the local compose environment.
+discovery.docker "mini_project" {
+  host             = "unix:///var/run/docker.sock"
+  refresh_interval = "5s"
+}
+
+// Apply stable labels so logs are queryable in Grafana Explore.
+discovery.relabel "mini_project" {
+  targets = []
+
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex         = "/(.*)"
+    target_label  = "container"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_project"]
+    target_label  = "compose_project"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+    target_label  = "compose_service"
+  }
+}
+
+// Read logs directly from Docker.
+loki.source.docker "mini_project" {
+  host             = "unix:///var/run/docker.sock"
+  targets          = discovery.docker.mini_project.targets
+  relabel_rules    = discovery.relabel.mini_project.rules
+  refresh_interval = "5s"
+  forward_to       = [loki.process.mini_project.receiver]
+}
+
+// Add a small set of static labels for this stack.
+loki.process "mini_project" {
+  stage.static_labels {
+    values = {
+      stack  = "mini-project",
+      source = "docker",
+    }
+  }
+
+  forward_to = [loki.write.mini_project.receiver]
+}
+
+// Ship logs to Loki.
+loki.write "mini_project" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}
+
+// Expose Alloy live debugging UI for local troubleshooting.
+livedebugging {
+  enabled = true
+}

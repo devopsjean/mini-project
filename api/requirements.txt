@@ -8,3 +8,13 @@ uvicorn[standard]==0.27.1
 # Prometheus client library for exporting application-level metrics
 # Used to define Error Rate and Latency SLIs
 prometheus-client==0.20.0
+
+# HTTP client used to call the downstream dependency service
+httpx==0.27.2
+
+# OpenTelemetry tracing packages
+opentelemetry-api==1.30.0
+opentelemetry-sdk==1.30.0
+opentelemetry-exporter-otlp-proto-http==1.30.0
+opentelemetry-instrumentation-fastapi==0.51b0
+opentelemetry-instrumentation-httpx==0.51b0

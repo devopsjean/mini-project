@@ -56,4 +56,5 @@ EXPOSE 8080
 # - --host 0.0.0.0 allows access from other containers
 # - --port 8080 matches docker-compose and Prometheus scrape configuration
 # - Auto-reload is intentionally disabled for predictable runtime behavior
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080"]
+# - Access log is disabled because the app emits structured JSON request logs itself
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080", "--no-access-log"]

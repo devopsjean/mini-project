@@ -1,3 +1,14 @@
 # macOS Finder metadata
 .DS_Store
 **/.DS_Store
+__pycache__/
+
+# Private planning notes
+.observability-upgrade-strategy.md
+.observability-logql-queries.md
+
+# Local reference materials / editor-generated files
+loki-fundamentals/
+api/.stubs/
+observability-stack/README.md
+observability-stack/grafana/

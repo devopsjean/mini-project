@@ -3,6 +3,8 @@
 #         Observability(Metrics) -> Alerting -> Incident simulation -> RCA.
 # - Components:
 #     api          : FastAPI service exposing /health, /metrics (+ /slow, /error for failure injection)
+#     dependency   : downstream FastAPI service that owns injected latency/error behavior
+#     db           : PostgreSQL backing store used by the dependency service
 #     prometheus   : metrics scraping + alert rule evaluation
 #     alertmanager : alert routing/grouping/dedup + delivery (local webhook)
 #     grafana      : visualization dashboards (Prometheus data source)
@@ -37,9 +39,59 @@ services:
 
     environment:
       <<: *common-env
+      DEPENDENCY_BASE_URL: http://dependency:8081
+      DEPENDENCY_TIMEOUT_SECONDS: 5
 
     # Single shared network keeps service discovery simple:
     # - Prometheus scrapes http://api:8080/metrics inside the network
+    networks:
+      - monitoring
+
+    depends_on:
+      - dependency
+
+  dependency:
+    # Downstream dependency service.
+    # - The ingress API delegates latency/error behavior here so failures cross a service boundary.
+    build:
+      context: ./dependency
+    container_name: dependency
+
+    ports:
+      - "8081:8081"
+
+    environment:
+      <<: *common-env
+      DATABASE_URL: postgresql+psycopg://mini_project:mini_project@db:5432/mini_project
+
+    depends_on:
+      db:
+        condition: service_healthy
+
+    networks:
+      - monitoring
+
+  db:
+    # PostgreSQL store used by the dependency service.
+    image: postgres:16-alpine
+    container_name: db
+
+    environment:
+      <<: *common-env
+      POSTGRES_DB: mini_project
+      POSTGRES_USER: mini_project
+      POSTGRES_PASSWORD: mini_project
+
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      - ./dependency/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mini_project -d mini_project"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
     networks:
       - monitoring
 
@@ -191,3 +243,4 @@ volumes:
   # Persist Prometheus TSDB and Grafana state to keep evidence reproducible across restarts.
   prometheus_data: {}
   grafana_data: {}
+  db_data: {}
